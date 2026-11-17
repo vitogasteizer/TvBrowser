@@ -43,15 +43,49 @@ class Store(ctx: Context) {
 
     fun clearHistory() { p.edit().remove("h").apply() }
 
+    private fun gi(k: String, d: Int) = p.getInt(k, d)
+    private fun si(k: String, v: Int) { p.edit().putInt(k, v).apply() }
+
     var mouse: Boolean
         get() = p.getBoolean("mouse", true)
         set(v) { p.edit().putBoolean("mouse", v).apply() }
-
+    var autohide: Boolean
+        get() = p.getBoolean("autohide", false)
+        set(v) { p.edit().putBoolean("autohide", v).apply() }
     var ua: Int
-        get() = p.getInt("ua", 0)
-        set(v) { p.edit().putInt("ua", v).apply() }
+        get() = gi("ua", 0)
+        set(v) { si("ua", v) }
+    var speed: Int
+        get() = gi("speed", 6)
+        set(v) { si("speed", v) }
+    var accel: Int
+        get() = gi("accel", 4)
+        set(v) { si("accel", v) }
+    var scrollSpeed: Int
+        get() = gi("scroll", 5)
+        set(v) { si("scroll", v) }
+    var cursorSize: Int
+        get() = gi("csize", 1)
+        set(v) { si("csize", v) }
+    var cursorColor: Int
+        get() = gi("ccolor", 0)
+        set(v) { si("ccolor", v) }
+    var zoom: Int
+        get() = gi("zoom", 100)
+        set(v) { si("zoom", v) }
+    var home: String
+        get() = p.getString("home", "tvb:home") ?: "tvb:home"
+        set(v) { p.edit().putString("home", v).apply() }
 
-    var lastUrl: String
-        get() = p.getString("last", "https://www.google.com") ?: "https://www.google.com"
-        set(v) { p.edit().putString("last", v).apply() }
+    val deviceId: String
+        get() {
+            val cur = p.getString("id", null)
+            if (cur != null) return cur
+            val chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+            val n = "usr_" + (1..14).map { chars.random() }.joinToString("")
+            p.edit().putString("id", n).apply()
+            return n
+        }
+
+    fun newDeviceId(): String { p.edit().remove("id").apply(); return deviceId }
 }

@@ -10,6 +10,7 @@ import android.view.View
 class CursorView(ctx: Context) : View(ctx) {
     var cx = 0f
     var cy = 0f
+    private var scale = 1.3f
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.BLACK; style = Paint.Style.STROKE; strokeWidth = 2.5f
@@ -18,8 +19,14 @@ class CursorView(ctx: Context) : View(ctx) {
 
     init { isFocusable = false; isClickable = false }
 
+    fun style(sizeIdx: Int, c: Int) {
+        scale = floatArrayOf(0.9f, 1.3f, 1.9f)[sizeIdx.coerceIn(0, 2)]
+        fill.color = c
+        invalidate()
+    }
+
     override fun onDraw(c: Canvas) {
-        val s = resources.displayMetrics.density * 1.3f
+        val s = resources.displayMetrics.density * scale
         path.reset()
         path.moveTo(cx, cy)
         path.lineTo(cx, cy + 34 * s)

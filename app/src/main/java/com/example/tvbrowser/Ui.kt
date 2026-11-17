@@ -1,0 +1,213 @@
+package com.example.tvbrowser
+
+import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.Gravity
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.SeekBar
+import android.widget.TextView
+
+object Ui {
+    val BG = 0xFF0E1116.toInt()
+    val SURF = 0xFF171B22.toInt()
+    val SURF2 = 0xFF222833.toInt()
+    val LINE = 0xFF262C36.toInt()
+    val TEXT = 0xFFF2F4F8.toInt()
+    val MUTED = 0xFF9AA4B2.toInt()
+    val ACC = 0xFF6EA8FF.toInt()
+    val ON_ACC = 0xFF0B1220.toInt()
+
+    fun dp(ctx: Context, v: Float) = (v * ctx.resources.displayMetrics.density).toInt()
+
+    fun rect(ctx: Context, color: Int, r: Float, stroke: Int = 0, sw: Float = 0f): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(ctx, r).toFloat()
+            if (stroke != 0) setStroke(dp(ctx, sw), stroke)
+        }
+
+    fun btnBg(ctx: Context, color: Int, r: Float): StateListDrawable = StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), rect(ctx, color, r, ACC, 3f))
+        addState(intArrayOf(android.R.attr.state_pressed), rect(ctx, color, r, MUTED, 3f))
+        addState(intArrayOf(), rect(ctx, color, r))
+    }
+
+    fun fieldBg(ctx: Context): StateListDrawable = StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), rect(ctx, BG, 26f, ACC, 3f))
+        addState(intArrayOf(), rect(ctx, BG, 26f, LINE, 1f))
+    }
+
+    fun button(ctx: Context, text: String, primary: Boolean = false, sp: Float = 16f, onClick: (() -> Unit)? = null): Button =
+        Button(ctx).apply {
+            this.text = text
+            isAllCaps = false
+            textSize = sp
+            setTextColor(if (primary) ON_ACC else TEXT)
+            stateListAnimator = null
+            minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
+            setPadding(dp(ctx, 20f), 0, dp(ctx, 20f), 0)
+            background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
+            isFocusable = true
+            if (onClick != null) setOnClickListener { onClick() }
+        }
+
+    fun field(ctx: Context, hint: String, text: String = ""): EditText = EditText(ctx).apply {
+        setSingleLine(true)
+        setHint(hint)
+        setText(text)
+        setTextColor(TEXT)
+        setHintTextColor(MUTED)
+        textSize = 18f
+        background = fieldBg(ctx)
+        setPadding(dp(ctx, 22f), 0, dp(ctx, 22f), 0)
+        setSelectAllOnFocus(true)
+    }
+
+    fun card(ctx: Context) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        background = rect(ctx, SURF, 28f, LINE, 1f)
+        setPadding(dp(ctx, 28f), dp(ctx, 22f), dp(ctx, 28f), dp(ctx, 12f))
+    }
+
+    fun heading(ctx: Context, t: String) = TextView(ctx).apply {
+        text = t; setTextColor(TEXT); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
+        setPadding(0, 0, 0, dp(ctx, 6f))
+    }
+
+    fun note(ctx: Context, t: String) = TextView(ctx).apply {
+        text = t; setTextColor(MUTED); textSize = 16f
+        setPadding(0, 0, 0, dp(ctx, 12f))
+    }
+
+    fun row(ctx: Context, label: String, control: View): LinearLayout = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(ctx, 72f)
+        addView(TextView(ctx).apply { text = label; setTextColor(TEXT); textSize = 18f },
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        val lp = (control.layoutParams as? LinearLayout.LayoutParams)
+            ?: LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        addView(control, lp)
+    }
+
+    fun seek(ctx: Context, min: Int, max: Int, value: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(ctx).apply {
+        this.max = max - min
+        progress = value - min
+        keyProgressIncrement = 1
+        progressTintList = ColorStateList.valueOf(ACC)
+        thumbTintList = ColorStateList.valueOf(ACC)
+        layoutParams = LinearLayout.LayoutParams(dp(ctx, 320f), LinearLayout.LayoutParams.WRAP_CONTENT)
+        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(s: SeekBar, p: Int, fromUser: Boolean) { if (fromUser) onChange(p + min) }
+            override fun onStartTrackingTouch(s: SeekBar) {}
+            override fun onStopTrackingTouch(s: SeekBar) {}
+        })
+    }
+
+    fun seg(ctx: Context, opts: List<String>, sel: Int, onSel: (Int) -> Unit): LinearLayout {
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = rect(ctx, BG, 28f)
+            setPadding(dp(ctx, 5f), dp(ctx, 5f), dp(ctx, 5f), dp(ctx, 5f))
+        }
+        val btns = mutableListOf<Button>()
+        fun paint(s: Int) {
+            btns.forEachIndexed { i, b ->
+                b.background = btnBg(ctx, if (i == s) ACC else Color.TRANSPARENT, 22f)
+                b.setTextColor(if (i == s) ON_ACC else MUTED)
+            }
+        }
+        opts.forEachIndexed { i, t ->
+            val b = button(ctx, t, false, 16f) { paint(i); onSel(i) }
+            btns.add(b)
+            box.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 46f)).apply { marginStart = dp(ctx, 2f) })
+        }
+        paint(sel)
+        return box
+    }
+
+    private fun swatchBg(ctx: Context, c: Int, selected: Boolean): StateListDrawable {
+        fun oval(stroke: Int) = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(c)
+            if (stroke != 0) setStroke(dp(ctx, 3f), stroke)
+        }
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), oval(ACC))
+            addState(intArrayOf(), oval(if (selected) ACC else 0))
+        }
+    }
+
+    fun swatches(ctx: Context, colors: IntArray, sel: Int, onSel: (Int) -> Unit): LinearLayout {
+        val box = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val btns = mutableListOf<Button>()
+        fun paint(s: Int) { btns.forEachIndexed { i, b -> b.background = swatchBg(ctx, colors[i], i == s) } }
+        colors.forEachIndexed { i, _ ->
+            val b = Button(ctx)
+            b.stateListAnimator = null
+            b.isFocusable = true
+            b.setOnClickListener { paint(i); onSel(i) }
+            btns.add(b)
+            box.addView(b, LinearLayout.LayoutParams(dp(ctx, 44f), dp(ctx, 44f)).apply { marginStart = dp(ctx, 14f) })
+        }
+        paint(sel)
+        return box
+    }
+
+    fun onText(e: EditText, f: (String) -> Unit) {
+        e.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) { f(s?.toString() ?: "") }
+        })
+    }
+
+    /** Full-screen page with a back button, title and scrolling body. */
+    fun screen(ctx: Context, title: String, onBack: () -> Unit, body: View): FrameLayout {
+        val f = FrameLayout(ctx)
+        f.setBackgroundColor(BG)
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, 48f), dp(ctx, 32f), dp(ctx, 48f), dp(ctx, 24f))
+        }
+        val head = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
+        head.addView(button(ctx, "◀", false, 20f) { onBack() }, LinearLayout.LayoutParams(dp(ctx, 60f), dp(ctx, 60f)))
+        head.addView(TextView(ctx).apply {
+            text = title; textSize = 30f; typeface = Typeface.DEFAULT_BOLD; setTextColor(TEXT)
+            setPadding(dp(ctx, 20f), 0, 0, 0)
+        })
+        col.addView(head)
+        val sv = ScrollView(ctx)
+        sv.addView(body)
+        col.addView(sv, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f).apply { topMargin = dp(ctx, 24f) })
+        f.addView(col, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        return f
+    }
+
+    /** Two equal columns filled with cards. */
+    fun twoCols(ctx: Context, left: List<View>, right: List<View>): LinearLayout {
+        fun col(items: List<View>) = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            items.forEach {
+                addView(it, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .apply { bottomMargin = dp(ctx, 20f) })
+            }
+        }
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(col(left), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(ctx, 12f) })
+            addView(col(right), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(ctx, 12f) })
+        }
+    }
+}
