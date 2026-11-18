@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import java.io.File
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -68,7 +69,7 @@ object SyncUi {
     fun build(ctx: Context, s: Store, close: () -> Unit): View {
         var hidden = false
         val idView = TextView(ctx).apply {
-            setTextColor(Ui.TEXT); textSize = 18f; typeface = Typeface.MONOSPACE
+            setTextColor(Ui.TEXT); px(18f); typeface = Typeface.MONOSPACE
             background = Ui.rect(ctx, Ui.BG, 26f, Ui.LINE, 1f)
             gravity = Gravity.CENTER_VERTICAL
             setPadding(Ui.dp(ctx, 22f), 0, Ui.dp(ctx, 22f), 0)
@@ -156,22 +157,22 @@ object ConnectUi {
             card.addView(box, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(ctx, 48f) })
         }
         val status = TextView(ctx).apply {
-            text = "ელოდება ტელეფონს…"; setTextColor(Ui.MUTED); textSize = 20f
+            text = "ელოდება ტელეფონს…"; setTextColor(Ui.MUTED); px(20f)
         }
         val right = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         right.addView(TextView(ctx).apply {
-            text = "ტელეფონის დაკავშირება"; setTextColor(Ui.TEXT); textSize = 32f; typeface = Typeface.DEFAULT_BOLD
+            text = "ტელეფონის დაკავშირება"; setTextColor(Ui.TEXT); px(32f); typeface = Typeface.DEFAULT_BOLD
         })
         listOf(
             "1. ტელეფონი და ტელევიზორი ერთ Wi-Fi-ზე შეაერთე",
             "2. დაასკანერე QR კოდი კამერით",
             "3. ტელეფონი გახდება ტრეკპადი და კლავიატურა"
         ).forEach {
-            right.addView(TextView(ctx).apply { text = it; setTextColor(Ui.TEXT); textSize = 20f; setPadding(0, Ui.dp(ctx, 14f), 0, 0) })
+            right.addView(TextView(ctx).apply { text = it; setTextColor(Ui.TEXT); px(20f); setPadding(0, Ui.dp(ctx, 14f), 0, 0) })
         }
         right.addView(TextView(ctx).apply {
             text = url ?: "Wi-Fi ვერ ვიპოვე. შეაერთე ტელევიზორი ქსელში."
-            setTextColor(Ui.TEXT); textSize = 18f; typeface = Typeface.MONOSPACE
+            setTextColor(Ui.TEXT); px(18f); typeface = Typeface.MONOSPACE
             background = Ui.rect(ctx, Ui.BG, 22f, Ui.LINE, 1f)
             setPadding(Ui.dp(ctx, 20f), Ui.dp(ctx, 14f), Ui.dp(ctx, 20f), Ui.dp(ctx, 14f))
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 24f) })
@@ -184,5 +185,36 @@ object ConnectUi {
         card.addView(right)
         frame.addView(card, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         return frame to status
+    }
+}
+
+object FilesUi {
+    private fun fmt(b: Long) = if (b >= 1048576) "%.1f MB".format(b / 1048576.0) else "%d KB".format(maxOf(1L, b / 1024))
+
+    fun build(ctx: Context, dir: File, onOpen: (File) -> Unit, onPick: () -> Unit, close: () -> Unit): View {
+        val list = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        fun refresh() {
+            list.removeAllViews()
+            val files = (dir.listFiles() ?: emptyArray<File>()).filter { it.isFile }.sortedByDescending { it.lastModified() }
+            if (files.isEmpty()) list.addView(Ui.note(ctx, "ფაილები ჯერ არ არის. ჩამოტვირთე ფაილი საიტზე ბმულზე დაჭერით."))
+            files.forEach { f ->
+                val row = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
+                val ob = Ui.button(ctx, f.name + "   (" + fmt(f.length()) + ")", false, 16f) { onOpen(f) }
+                ob.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                row.addView(ob, LinearLayout.LayoutParams(0, Ui.dp(ctx, 52f), 1f))
+                row.addView(Ui.button(ctx, "წაშლა", false, 16f) { f.delete(); refresh() },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
+                list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 10f) })
+            }
+        }
+        refresh()
+        val body = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(Ui.note(ctx, "საქაღალდე: " + dir.absolutePath))
+            addView(Ui.button(ctx, "სხვა ფაილის არჩევა…", true, 16f) { onPick() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { bottomMargin = Ui.dp(ctx, 16f) })
+            addView(list)
+        }
+        return Ui.screen(ctx, "ფაილები", close, body)
     }
 }

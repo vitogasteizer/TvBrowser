@@ -34,7 +34,7 @@ class Store(ctx: Context) {
     fun removeBookmark(u: String) { save("b", load("b").filter { it.second != u }) }
 
     fun addHistory(t: String, u: String) {
-        if (u.startsWith("about:") || u.startsWith("data:")) return
+        if (u.startsWith("about:") || u.startsWith("data:") || u.startsWith("file:") || u.startsWith("content:")) return
         val l = load("h")
         l.removeAll { it.second == u }
         l.add(0, t to u)
@@ -50,7 +50,7 @@ class Store(ctx: Context) {
         get() = p.getBoolean("mouse", true)
         set(v) { p.edit().putBoolean("mouse", v).apply() }
     var autohide: Boolean
-        get() = p.getBoolean("autohide", false)
+        get() = p.getBoolean("autohide", true)
         set(v) { p.edit().putBoolean("autohide", v).apply() }
     var ua: Int
         get() = gi("ua", 0)

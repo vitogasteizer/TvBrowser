@@ -8,6 +8,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -28,7 +29,13 @@ object Ui {
     val ACC = 0xFF6EA8FF.toInt()
     val ON_ACC = 0xFF0B1220.toInt()
 
-    fun dp(ctx: Context, v: Float) = (v * ctx.resources.displayMetrics.density).toInt()
+    /** One layout unit = 1/1500 of the screen's long side, so the UI scales with any TV resolution. */
+    fun unit(ctx: Context): Float {
+        val m = ctx.resources.displayMetrics
+        return maxOf(m.widthPixels, m.heightPixels) / 1500f
+    }
+
+    fun dp(ctx: Context, v: Float) = (v * unit(ctx)).toInt()
 
     fun rect(ctx: Context, color: Int, r: Float, stroke: Int = 0, sw: Float = 0f): GradientDrawable =
         GradientDrawable().apply {
@@ -52,11 +59,11 @@ object Ui {
         Button(ctx).apply {
             this.text = text
             isAllCaps = false
-            textSize = sp
+            px(sp)
             setTextColor(if (primary) ON_ACC else TEXT)
             stateListAnimator = null
             minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
-            setPadding(dp(ctx, 20f), 0, dp(ctx, 20f), 0)
+            setPadding(dp(ctx, 14f), 0, dp(ctx, 14f), 0)
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
             isFocusable = true
             if (onClick != null) setOnClickListener { onClick() }
@@ -68,7 +75,7 @@ object Ui {
         setText(text)
         setTextColor(TEXT)
         setHintTextColor(MUTED)
-        textSize = 18f
+        px(18f)
         background = fieldBg(ctx)
         setPadding(dp(ctx, 22f), 0, dp(ctx, 22f), 0)
         setSelectAllOnFocus(true)
@@ -81,12 +88,12 @@ object Ui {
     }
 
     fun heading(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; setTextColor(TEXT); textSize = 22f; typeface = Typeface.DEFAULT_BOLD
+        text = t; setTextColor(TEXT); px(22f); typeface = Typeface.DEFAULT_BOLD
         setPadding(0, 0, 0, dp(ctx, 6f))
     }
 
     fun note(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; setTextColor(MUTED); textSize = 16f
+        text = t; setTextColor(MUTED); px(16f)
         setPadding(0, 0, 0, dp(ctx, 12f))
     }
 
@@ -94,7 +101,7 @@ object Ui {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         minimumHeight = dp(ctx, 72f)
-        addView(TextView(ctx).apply { text = label; setTextColor(TEXT); textSize = 18f },
+        addView(TextView(ctx).apply { text = label; setTextColor(TEXT); px(18f) },
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         val lp = (control.layoutParams as? LinearLayout.LayoutParams)
             ?: LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -184,7 +191,7 @@ object Ui {
         val head = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
         head.addView(button(ctx, "◀", false, 20f) { onBack() }, LinearLayout.LayoutParams(dp(ctx, 60f), dp(ctx, 60f)))
         head.addView(TextView(ctx).apply {
-            text = title; textSize = 30f; typeface = Typeface.DEFAULT_BOLD; setTextColor(TEXT)
+            text = title; px(30f); typeface = Typeface.DEFAULT_BOLD; setTextColor(TEXT)
             setPadding(dp(ctx, 20f), 0, 0, 0)
         })
         col.addView(head)
@@ -210,4 +217,8 @@ object Ui {
             addView(col(right), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(ctx, 12f) })
         }
     }
+}
+
+fun TextView.px(v: Float) {
+    setTextSize(TypedValue.COMPLEX_UNIT_PX, v * Ui.unit(context))
 }
