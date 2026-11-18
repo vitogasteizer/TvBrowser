@@ -14,6 +14,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
@@ -65,6 +67,19 @@ object Ui {
             minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
             setPadding(dp(ctx, 14f), 0, dp(ctx, 14f), 0)
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
+            isFocusable = true
+            if (onClick != null) setOnClickListener { onClick() }
+        }
+
+    fun icon(ctx: Context, res: Int, desc: String, primary: Boolean = false, onClick: (() -> Unit)? = null): ImageButton =
+        ImageButton(ctx).apply {
+            setImageResource(res)
+            contentDescription = desc
+            scaleType = ImageView.ScaleType.CENTER_INSIDE
+            setPadding(dp(ctx, 11f), dp(ctx, 11f), dp(ctx, 11f), dp(ctx, 11f))
+            imageTintList = ColorStateList.valueOf(if (primary) ON_ACC else TEXT)
+            background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
+            stateListAnimator = null
             isFocusable = true
             if (onClick != null) setOnClickListener { onClick() }
         }

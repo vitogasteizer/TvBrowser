@@ -6,12 +6,15 @@ import android.app.AlertDialog
 import android.app.Dialog
 import android.content.Intent
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.view.Gravity
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -32,10 +35,13 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ScrollView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -70,8 +76,9 @@ class MainActivity : Activity() {
     private lateinit var web: WebView
     private lateinit var cursor: CursorView
     private lateinit var urlBox: EditText
-    private lateinit var modeBtn: Button
-    private lateinit var uaBtn: Button
+    private lateinit var modeBtn: ImageButton
+    private lateinit var uaBtn: ImageButton
+    private var overlayScroll: ScrollView? = null
     private lateinit var promptBox: LinearLayout
     private lateinit var store: Store
     private val handler = Handler(Looper.getMainLooper())
@@ -97,15 +104,16 @@ class MainActivity : Activity() {
 
     private val hidePrompt = Runnable { showPrompt(false) }
     private val hideBar = Runnable {
-        if (!store.autohide || customView != null || overlay != null || dialog != null || urlBox.hasFocus()) return@Runnable
+        if (!autoHide() || customView != null || overlay != null || dialog != null || urlBox.hasFocus()) return@Runnable
         if (mouseMode && curY <= tbBottom()) { scheduleHide(); return@Runnable }
         if (toolbar.hasFocus()) web.requestFocus()
         toolbar.visibility = View.GONE
     }
 
+    private fun autoHide() = store.autohide && mouseMode
     private fun dp(x: Float) = Ui.dp(this, x)
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
-    private fun tbBottom() = dp(68f).toFloat()
+    private fun tbBottom() = dp(76f).toFloat()
 
     // ------------------------------------------------------------ UI
     @SuppressLint("SetJavaScriptEnabled")
@@ -113,6 +121,10 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         store = Store(this)
+        if (store.lastVersion != BuildConfig.VERSION_CODE) {
+            store.lastVersion = BuildConfig.VERSION_CODE
+            store.pendingTag?.let { store.updateTag = it; store.pendingTag = null }
+        }
         mouseMode = store.mouse
         uaMode = store.ua
 
@@ -138,24 +150,24 @@ class MainActivity : Activity() {
                 } else false
             }
         }
-        modeBtn = Ui.button(this, "", true, 13f) { mouseMode = !mouseMode; applyMode(); web.requestFocus() }
-        uaBtn = Ui.button(this, "", false, 13f) { uaMode = (uaMode + 1) % 3; store.ua = uaMode; applyUa(true); web.requestFocus() }
+        modeBtn = Ui.icon(this, R.drawable.ic_mouse, "რეჟიმი", true) { mouseMode = !mouseMode; applyMode(); web.requestFocus() }
+        uaBtn = Ui.icon(this, R.drawable.ic_desktop, "საიტის ვერსია") { uaMode = (uaMode + 1) % 3; store.ua = uaMode; applyUa(true); web.requestFocus() }
 
-        fun add(v: View, w: Int = LinearLayout.LayoutParams.WRAP_CONTENT) {
-            toolbar.addView(v, LinearLayout.LayoutParams(w, dp(40f)).apply { marginStart = dp(3f); marginEnd = dp(3f) })
+        fun add(v: View, w: Int = dp(48f)) {
+            toolbar.addView(v, LinearLayout.LayoutParams(w, dp(48f)).apply { marginStart = dp(3f); marginEnd = dp(3f) })
         }
-        add(Ui.button(this, "◀", false, 15f) { if (web.canGoBack()) web.goBack(); web.requestFocus() }, dp(42f))
-        add(Ui.button(this, "▶", false, 15f) { if (web.canGoForward()) web.goForward(); web.requestFocus() }, dp(42f))
-        add(Ui.button(this, "⟳", false, 15f) { web.reload(); web.requestFocus() }, dp(42f))
-        add(Ui.button(this, "მთავარი", false, 13f) { open(HOME); web.requestFocus() })
-        toolbar.addView(urlBox, LinearLayout.LayoutParams(0, dp(40f), 1f).apply { marginStart = dp(3f); marginEnd = dp(3f) })
-        add(Ui.button(this, "სანიშნეები", false, 13f) { showBookmarks() })
-        add(Ui.button(this, "ისტორია", false, 13f) { showHistory() })
-        add(Ui.button(this, "ფაილები", false, 13f) { showFiles() })
-        add(Ui.button(this, "ტელეფონი", false, 13f) { showConnect() })
+        add(Ui.icon(this, R.drawable.ic_back, "უკან") { if (web.canGoBack()) web.goBack(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_forward, "წინ") { if (web.canGoForward()) web.goForward(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_reload, "განახლება") { web.reload(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_home, "მთავარი") { open(HOME); web.requestFocus() })
+        toolbar.addView(urlBox, LinearLayout.LayoutParams(0, dp(48f), 1f).apply { marginStart = dp(3f); marginEnd = dp(3f) })
+        add(Ui.icon(this, R.drawable.ic_bookmark, "სანიშნეები") { showBookmarks() })
+        add(Ui.icon(this, R.drawable.ic_history, "ისტორია") { showHistory() })
+        add(Ui.icon(this, R.drawable.ic_folder, "ფაილები") { showFiles() })
+        add(Ui.icon(this, R.drawable.ic_phone, "ტელეფონი") { showConnect() })
         add(uaBtn)
         add(modeBtn)
-        add(Ui.button(this, "პარამეტრები", false, 13f) { showSettings() })
+        add(Ui.icon(this, R.drawable.ic_settings, "პარამეტრები") { showSettings() })
 
         promptBox = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -253,7 +265,7 @@ class MainActivity : Activity() {
                 customCb?.onCustomViewHidden()
                 customCb = null
                 content.visibility = View.VISIBLE
-                toolbar.visibility = if (store.autohide) View.GONE else View.VISIBLE
+                toolbar.visibility = if (autoHide()) View.GONE else View.VISIBLE
                 applyMode()
             }
         }
@@ -315,14 +327,15 @@ input:focus{outline:.25vw solid #6EA8FF}
             useWideViewPort = uaMode == 0
             loadWithOverviewMode = uaMode == 0
         }
-        uaBtn.text = UA_NAMES[uaMode]
+        uaBtn.setImageResource(listOf(R.drawable.ic_desktop, R.drawable.ic_tablet, R.drawable.ic_mobile)[uaMode])
         if (reload) web.reload()
     }
 
     private fun applyMode() {
-        cursor.visibility = if (mouseMode && customView == null && overlay == null) View.VISIBLE else View.GONE
-        modeBtn.text = if (mouseMode) "მაუსი" else "ღილაკები"
+        cursor.visibility = if (mouseMode && customView == null) View.VISIBLE else View.GONE
+        modeBtn.setImageResource(if (mouseMode) R.drawable.ic_mouse else R.drawable.ic_dpad)
         store.mouse = mouseMode
+        applyPrefs()
         if (overlay == null && dialog == null) web.requestFocus()
     }
 
@@ -330,15 +343,15 @@ input:focus{outline:.25vw solid #6EA8FF}
         cursor.style(store.cursorSize, CURSOR_COLORS[store.cursorColor.coerceIn(0, CURSOR_COLORS.size - 1)])
         web.settings.textZoom = store.zoom
         val lp = content.layoutParams as FrameLayout.LayoutParams
-        lp.topMargin = if (store.autohide) 0 else tbBottom().toInt()
+        lp.topMargin = if (autoHide()) 0 else tbBottom().toInt()
         content.layoutParams = lp
-        if (!store.autohide) toolbar.visibility = View.VISIBLE
+        if (!autoHide()) toolbar.visibility = View.VISIBLE
         scheduleHide()
     }
 
     private fun scheduleHide() {
         handler.removeCallbacks(hideBar)
-        if (store.autohide) handler.postDelayed(hideBar, 5000)
+        if (autoHide()) handler.postDelayed(hideBar, 5000)
     }
 
     private fun showBar(focus: Boolean) {
@@ -476,16 +489,19 @@ input:focus{outline:.25vw solid #6EA8FF}
         val w = root.width.toFloat()
         val h = root.height.toFloat()
         val edge = 2f * resources.displayMetrics.density
-        if (dy > 0 && curY >= h - 1 - edge) web.scrollBy(0, (abs(dy) * 1.5f).toInt())
+        val sv = overlayScroll
+        val amt = (abs(dy) * 1.5f).toInt()
+        if (dy > 0 && curY >= h - 1 - edge) { if (sv != null) sv.scrollBy(0, amt) else web.scrollBy(0, amt) }
         if (dy < 0 && curY <= edge) {
-            if (web.scrollY > 0) web.scrollBy(0, (-abs(dy) * 1.5f).toInt())
-            else if (toolbarOnTop) { showBar(true); return }
+            val sy = if (sv != null) sv.scrollY else web.scrollY
+            if (sy > 0) { if (sv != null) sv.scrollBy(0, -amt) else web.scrollBy(0, -amt) }
+            else if (toolbarOnTop && overlay == null) { showBar(true); return }
         }
         curX = (curX + dx).coerceIn(0f, w - 1)
         curY = (curY + dy).coerceIn(0f, h - 1)
         updateCursor()
         hover()
-        if (store.autohide) { if (curY <= tbBottom()) showBar(false) else scheduleHide() }
+        if (autoHide() && overlay == null) { if (curY <= tbBottom()) showBar(false) else scheduleHide() }
     }
 
     private fun hit(v: View, x: Float, y: Float): Boolean {
@@ -516,7 +532,21 @@ input:focus{outline:.25vw solid #6EA8FF}
         return null
     }
 
+    private fun touchOn(v: View, x: Float, y: Float) {
+        val t = SystemClock.uptimeMillis()
+        val down = MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x, y, 0)
+        v.dispatchTouchEvent(down)
+        down.recycle()
+        v.postDelayed({
+            val up = MotionEvent.obtain(t, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)
+            v.dispatchTouchEvent(up)
+            up.recycle()
+        }, 60)
+    }
+
     private fun click() {
+        val ov = overlay
+        if (ov != null) { touchOn(ov, curX, curY); return }
         val b = promptButtonAt(curX, curY)
         if (b != null) { b.performClick(); return }
         val tv = toolbarViewAt(curX, curY)
@@ -538,8 +568,8 @@ input:focus{outline:.25vw solid #6EA8FF}
 
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
         if (e.action == KeyEvent.ACTION_DOWN) scheduleHide()
-        if (overlay != null) return super.dispatchKeyEvent(e)
         val k = e.keyCode
+        if (k == KeyEvent.KEYCODE_MENU && e.action == KeyEvent.ACTION_DOWN && overlay == null) { showBar(true); return true }
         if (customView != null) {
             val media = k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER ||
                 k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE
@@ -573,7 +603,7 @@ input:focus{outline:.25vw solid #6EA8FF}
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> {
                 if (e.action == KeyEvent.ACTION_DOWN && e.isLongPress) {
                     longPressed = true
-                    showBar(true)
+                    if (overlay == null) showBar(true)
                 } else if (e.action == KeyEvent.ACTION_UP) {
                     if (!longPressed) click()
                     longPressed = false
@@ -657,27 +687,14 @@ input:focus{outline:.25vw solid #6EA8FF}
                 "m" -> {
                     val dx = p[1].toFloat()
                     val dy = p[2].toFloat()
-                    if (overlay != null || dialog != null) {
-                        // menus: swipes act like the D-pad
-                        dAx += dx
-                        dAy += dy
-                        if (abs(dAy) > 45f) {
-                            pressKey(if (dAy > 0) KeyEvent.KEYCODE_DPAD_DOWN else KeyEvent.KEYCODE_DPAD_UP)
-                            dAx = 0f; dAy = 0f
-                        } else if (abs(dAx) > 45f) {
-                            pressKey(if (dAx > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT)
-                            dAx = 0f; dAy = 0f
-                        }
-                        return
-                    }
                     if (!mouseMode || customView != null) return
                     val mag = hypot(dx, dy)
                     val boost = 1f + store.accel / 10f * min(mag / 20f, 2f)
                     val f = 0.6f * store.speed * boost
                     moveBy(dx * f, dy * f, false)
                 }
-                "c" -> if (plainMouse()) click() else pressKey(KeyEvent.KEYCODE_DPAD_CENTER)
-                "s" -> web.scrollBy(0, (p[1].toFloat() * store.scrollSpeed * 0.5f).toInt())
+                "c" -> if (mouseMode && customView == null) click() else pressKey(KeyEvent.KEYCODE_DPAD_CENTER)
+                "s" -> { val sd = (p[1].toFloat() * store.scrollSpeed * 0.5f).toInt(); val sv = overlayScroll; if (sv != null) sv.scrollBy(0, sd) else web.scrollBy(0, sd) }
                 "d" -> pressKey(
                     when (p[1]) {
                         "l" -> KeyEvent.KEYCODE_DPAD_LEFT
@@ -690,7 +707,7 @@ input:focus{outline:.25vw solid #6EA8FF}
                     "back" -> onBackPressed()
                     "reload" -> web.reload()
                     "full" -> goFullscreen()
-                    "ok" -> if (plainMouse()) click() else pressKey(KeyEvent.KEYCODE_DPAD_CENTER)
+                    "ok" -> if (mouseMode && customView == null) click() else pressKey(KeyEvent.KEYCODE_DPAD_CENTER)
                 }
                 "a" -> when (p[1]) {
                     "back" -> onBackPressed()
@@ -701,8 +718,11 @@ input:focus{outline:.25vw solid #6EA8FF}
                     "hist" -> showHistory()
                     "url" -> { showBar(false); urlBox.requestFocus() }
                     "set" -> showSettings()
+                    "files" -> showFiles()
+                    "ua" -> { uaMode = (uaMode + 1) % 3; store.ua = uaMode; applyUa(true) }
                     "full" -> goFullscreen()
                 }
+                "v" -> volume(p[1])
                 "t" -> typeText(m.substring(2))
                 "b" -> keyTo(focusOwner() ?: web, KeyEvent.KEYCODE_DEL)
                 "e" -> keyTo(focusOwner() ?: web, KeyEvent.KEYCODE_ENTER)
@@ -718,12 +738,19 @@ input:focus{outline:.25vw solid #6EA8FF}
         toolbar.descendantFocusability = m
     }
 
+    private fun findScroll(v: View): ScrollView? {
+        if (v is ScrollView) return v
+        if (v is ViewGroup) for (i in 0 until v.childCount) { val r = findScroll(v.getChildAt(i)); if (r != null) return r }
+        return null
+    }
+
     private fun showOverlay(v: View) {
         overlay?.let { root.removeView(it) }
         overlay = v
         root.addView(v, FrameLayout.LayoutParams(-1, -1))
         blockFocus(true)
-        cursor.visibility = View.GONE
+        overlayScroll = findScroll(v)
+        cursor.bringToFront()
         showPrompt(false)
         v.requestFocus()
     }
@@ -731,6 +758,7 @@ input:focus{outline:.25vw solid #6EA8FF}
     private fun closeOverlay() {
         overlay?.let { root.removeView(it) }
         overlay = null
+        overlayScroll = null
         connectStatus = null
         blockFocus(false)
         applyMode()
@@ -749,7 +777,8 @@ input:focus{outline:.25vw solid #6EA8FF}
             onPrefs = { applyPrefs() },
             openSync = { showSync() },
             clearHistory = { store.clearHistory(); toast("ისტორია წაიშალა") },
-            clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast("Cookie-ები წაიშალა") }
+            clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast("Cookie-ები წაიშალა") },
+            onUpdate = { checkUpdate() }
         )
         showOverlay(SettingsUi.build(this, store, a) { closeOverlay() })
     }
@@ -759,22 +788,7 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     private fun showAddSite() {
-        val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(22f), dp(12f), dp(22f), 0)
-        }
-        val n = Ui.field(this, "სახელი (არასავალდებულო)").apply { px(15f) }
-        val u = Ui.field(this, "მისამართი, მაგ. youtube.com").apply { px(15f) }
-        box.addView(n, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)))
-        box.addView(u, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44f)).apply { topMargin = dp(10f) })
-        val dlg = AlertDialog.Builder(this)
-            .setTitle("საიტის დამატება")
-            .setView(box)
-            .setPositiveButton("დამატება") { _, _ -> addSite(n.text.toString(), u.text.toString()) }
-            .setNegativeButton("გაუქმება", null)
-            .create()
-        track(dlg)
-        u.requestFocus()
+        showOverlay(AddSiteUi.build(this, { n, u -> addSite(n, u) }) { closeOverlay() })
     }
 
     private fun addSite(name: String, address: String) {
@@ -783,47 +797,96 @@ input:focus{outline:.25vw solid #6EA8FF}
         val title = name.ifBlank { Uri.parse(url).host?.removePrefix("www.") ?: url }
         store.addBookmark(title, url)
         toast("დაემატა: $title")
+        closeOverlay()
         if (startShown) open(HOME)
     }
 
     private fun showBookmarks() {
-        val l = store.bookmarks()
-        val lv = ListView(this)
-        lv.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, l.map { it.first + "\n" + it.second })
-        val dlg = AlertDialog.Builder(this)
-            .setTitle("სანიშნეები (დიდხანს დაჭერა = წაშლა)")
-            .setView(lv)
-            .setPositiveButton("+ ამ გვერდის დამატება") { _, _ ->
-                val u = web.url
-                if (u != null && !u.startsWith(START_BASE)) {
-                    store.addBookmark(web.title ?: u, u); toast("სანიშნე დაემატა")
-                }
-            }
-            .setNeutralButton("+ ხელით") { _, _ -> showAddSite() }
-            .setNegativeButton("დახურვა", null)
-            .create()
-        lv.setOnItemClickListener { _, _, i, _ -> dlg.dismiss(); go(l[i].second) }
-        lv.setOnItemLongClickListener { _, _, i, _ ->
-            store.removeBookmark(l[i].second); dlg.dismiss(); toast("წაიშალა")
-            if (startShown) open(HOME)
-            true
-        }
-        track(dlg)
+        showOverlay(ListUi.build(this, "სანიშნეები", store.bookmarks(),
+            { u -> closeOverlay(); go(u) },
+            { u -> store.removeBookmark(u); showBookmarks(); if (startShown) open(HOME) },
+            listOf(
+                "ამ გვერდის დამატება" to {
+                    val u = web.url
+                    if (u != null && !u.startsWith(START_BASE)) {
+                        store.addBookmark(web.title ?: u, u); toast("სანიშნე დაემატა"); showBookmarks()
+                    }
+                },
+                "ახალი საიტი" to { showAddSite() }
+            )) { closeOverlay() })
     }
 
     private fun showHistory() {
-        val l = store.history()
-        if (l.isEmpty()) { toast("ისტორია ცარიელია"); return }
-        val lv = ListView(this)
-        lv.adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, l.map { it.first + "\n" + it.second })
-        val dlg = AlertDialog.Builder(this)
-            .setTitle("ისტორია")
-            .setView(lv)
-            .setNeutralButton("გასუფთავება") { _, _ -> store.clearHistory() }
-            .setNegativeButton("დახურვა", null)
-            .create()
-        lv.setOnItemClickListener { _, _, i, _ -> dlg.dismiss(); go(l[i].second) }
-        track(dlg)
+        showOverlay(ListUi.build(this, "ისტორია", store.history(),
+            { u -> closeOverlay(); go(u) }, null,
+            listOf("გასუფთავება" to { store.clearHistory(); showHistory() })) { closeOverlay() })
+    }
+
+    // ------------------------------------------------------------ volume and updates
+    private fun volume(a: String) {
+        val am = getSystemService(AUDIO_SERVICE) as AudioManager
+        try {
+            when (a) {
+                "up" -> am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                "dn" -> am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                else -> if (Build.VERSION.SDK_INT >= 23) {
+                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI)
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    private fun checkUpdate() {
+        val url = store.updateUrl
+        if (url.isBlank()) { toast("განახლების ბმული არ არის მითითებული"); return }
+        toast("მოწმდება…")
+        Thread {
+            try {
+                val c = URL(url).openConnection() as HttpURLConnection
+                c.instanceFollowRedirects = true
+                c.connectTimeout = 15000
+                c.readTimeout = 60000
+                if (c.responseCode != 200) {
+                    val code = c.responseCode
+                    runOnUiThread { toast("განახლება ვერ მოიძებნა ($code)") }
+                    return@Thread
+                }
+                val tag = c.getHeaderField("ETag") ?: c.getHeaderField("Last-Modified") ?: c.contentLength.toString()
+                val f = File(downloadDir(), "update.apk")
+                if (tag == store.updateTag) {
+                    c.disconnect()
+                    runOnUiThread { toast("უახლესი ვერსიაა") }
+                    return@Thread
+                }
+                if (!(tag == store.pendingTag && f.exists())) {
+                    runOnUiThread { toast("იტვირთება ახალი ვერსია…") }
+                    c.inputStream.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
+                    store.pendingTag = tag
+                } else {
+                    c.disconnect()
+                }
+                runOnUiThread { installApk(f) }
+            } catch (e: Exception) {
+                runOnUiThread { toast("განახლება ვერ მოხერხდა") }
+            }
+        }.start()
+    }
+
+    private fun installApk(f: File) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
+                toast("ჩართე უცნობი აპების დაყენება ამ აპისთვის და ისევ დააჭირე განახლებას")
+                startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
+                return
+            }
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", f)
+            val i = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(i)
+        } catch (e: Exception) {
+            toast("ინსტალაცია ვერ გაიხსნა")
+        }
     }
 
     override fun onPause() { super.onPause(); web.onPause() }

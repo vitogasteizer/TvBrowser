@@ -77,6 +77,19 @@ class Store(ctx: Context) {
         get() = p.getString("home", "tvb:home") ?: "tvb:home"
         set(v) { p.edit().putString("home", v).apply() }
 
+    var updateUrl: String
+        get() = p.getString("uurl", null) ?: BuildConfig.UPDATE_URL
+        set(v) { p.edit().putString("uurl", v).apply() }
+    var updateTag: String?
+        get() = p.getString("utag", null)
+        set(v) { p.edit().putString("utag", v).apply() }
+    var pendingTag: String?
+        get() = p.getString("ptag", null)
+        set(v) { p.edit().putString("ptag", v).apply() }
+    var lastVersion: Int
+        get() = gi("lastv", 0)
+        set(v) { si("lastv", v) }
+
     val deviceId: String
         get() {
             val cur = p.getString("id", null)
