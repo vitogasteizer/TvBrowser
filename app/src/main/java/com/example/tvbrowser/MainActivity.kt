@@ -70,6 +70,7 @@ class MainActivity : Activity() {
         const val PICK_FILE = 77
     }
 
+    private lateinit var screenFrame: FrameLayout
     private lateinit var root: FrameLayout
     private lateinit var content: FrameLayout
     private lateinit var toolbar: LinearLayout
@@ -113,7 +114,7 @@ class MainActivity : Activity() {
     private fun autoHide() = store.autohide && mouseMode
     private fun dp(x: Float) = Ui.dp(this, x)
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
-    private fun tbBottom() = dp(76f).toFloat()
+    private fun tbBottom() = dp(104f).toFloat()
 
     // ------------------------------------------------------------ UI
     @SuppressLint("SetJavaScriptEnabled")
@@ -136,11 +137,11 @@ class MainActivity : Activity() {
         toolbar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = Ui.rect(this@MainActivity, Ui.SURF, 30f, Ui.LINE, 1f)
-            setPadding(dp(8f), dp(6f), dp(8f), dp(6f))
+            background = Ui.rect(this@MainActivity, Ui.SURF, 42f, Ui.LINE, 1f)
+            setPadding(dp(14f), dp(10f), dp(14f), dp(10f))
         }
 
-        urlBox = Ui.field(this, "მოძებნე ან ჩაწერე მისამართი").apply {
+        urlBox = Ui.field(this, getString(R.string.url_hint)).apply {
             px(14f)
             inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
             imeOptions = EditorInfo.IME_ACTION_GO
@@ -150,24 +151,24 @@ class MainActivity : Activity() {
                 } else false
             }
         }
-        modeBtn = Ui.icon(this, R.drawable.ic_mouse, "რეჟიმი", true) { mouseMode = !mouseMode; applyMode(); web.requestFocus() }
-        uaBtn = Ui.icon(this, R.drawable.ic_desktop, "საიტის ვერსია") { uaMode = (uaMode + 1) % 3; store.ua = uaMode; applyUa(true); web.requestFocus() }
+        modeBtn = Ui.icon(this, R.drawable.ic_mouse, getString(R.string.mode), true) { mouseMode = !mouseMode; applyMode(); web.requestFocus() }
+        uaBtn = Ui.icon(this, R.drawable.ic_desktop, getString(R.string.site_version)) { uaMode = (uaMode + 1) % 3; store.ua = uaMode; applyUa(true); web.requestFocus() }
 
-        fun add(v: View, w: Int = dp(48f)) {
-            toolbar.addView(v, LinearLayout.LayoutParams(w, dp(48f)).apply { marginStart = dp(3f); marginEnd = dp(3f) })
+        fun add(v: View, w: Int = dp(52f)) {
+            toolbar.addView(v, LinearLayout.LayoutParams(w, dp(52f)).apply { marginStart = dp(3f); marginEnd = dp(3f) })
         }
-        add(Ui.icon(this, R.drawable.ic_back, "უკან") { if (web.canGoBack()) web.goBack(); web.requestFocus() })
-        add(Ui.icon(this, R.drawable.ic_forward, "წინ") { if (web.canGoForward()) web.goForward(); web.requestFocus() })
-        add(Ui.icon(this, R.drawable.ic_reload, "განახლება") { web.reload(); web.requestFocus() })
-        add(Ui.icon(this, R.drawable.ic_home, "მთავარი") { open(HOME); web.requestFocus() })
-        toolbar.addView(urlBox, LinearLayout.LayoutParams(0, dp(48f), 1f).apply { marginStart = dp(3f); marginEnd = dp(3f) })
-        add(Ui.icon(this, R.drawable.ic_bookmark, "სანიშნეები") { showBookmarks() })
-        add(Ui.icon(this, R.drawable.ic_history, "ისტორია") { showHistory() })
-        add(Ui.icon(this, R.drawable.ic_folder, "ფაილები") { showFiles() })
-        add(Ui.icon(this, R.drawable.ic_phone, "ტელეფონი") { showConnect() })
+        add(Ui.icon(this, R.drawable.ic_back, getString(R.string.back)) { if (web.canGoBack()) web.goBack(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_forward, getString(R.string.forward)) { if (web.canGoForward()) web.goForward(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_reload, getString(R.string.reload)) { web.reload(); web.requestFocus() })
+        add(Ui.icon(this, R.drawable.ic_home, getString(R.string.home)) { open(HOME); web.requestFocus() })
+        toolbar.addView(urlBox, LinearLayout.LayoutParams(0, dp(52f), 1f).apply { marginStart = dp(3f); marginEnd = dp(3f) })
+        add(Ui.icon(this, R.drawable.ic_bookmark, getString(R.string.bookmarks)) { showBookmarks() })
+        add(Ui.icon(this, R.drawable.ic_history, getString(R.string.history)) { showHistory() })
+        add(Ui.icon(this, R.drawable.ic_folder, getString(R.string.files)) { showFiles() })
+        add(Ui.icon(this, R.drawable.ic_phone, getString(R.string.phone)) { showConnect() })
         add(uaBtn)
         add(modeBtn)
-        add(Ui.icon(this, R.drawable.ic_settings, "პარამეტრები") { showSettings() })
+        add(Ui.icon(this, R.drawable.ic_settings, getString(R.string.settings)) { showSettings() })
 
         promptBox = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -176,28 +177,32 @@ class MainActivity : Activity() {
             background = Ui.rect(this@MainActivity, Ui.SURF, 28f, Ui.ACC, 2f)
             setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
             addView(TextView(this@MainActivity).apply {
-                text = "ვიდეო ნაპოვნია\nგაუშვა სრულ ეკრანზე?"; setTextColor(Ui.TEXT); px(15f)
+                text = getString(R.string.video_found); setTextColor(Ui.TEXT); px(15f)
             })
-            addView(Ui.button(this@MainActivity, "▶ სრულ ეკრანზე", true, 15f) { goFullscreen() },
+            addView(Ui.button(this@MainActivity, getString(R.string.play_fullscreen), true, 15f) { goFullscreen() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(46f)).apply { marginStart = dp(18f) })
-            addView(Ui.button(this@MainActivity, "არა", false, 15f) { dismissPrompt() },
+            addView(Ui.button(this@MainActivity, getString(R.string.no), false, 15f) { dismissPrompt() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(46f)).apply { marginStart = dp(8f) })
         }
 
         content.addView(web, FrameLayout.LayoutParams(-1, -1))
         content.addView(promptBox, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(28f), dp(28f)) })
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
-        root.addView(toolbar, FrameLayout.LayoutParams(-1, -2).apply { setMargins(dp(14f), dp(10f), dp(14f), 0) })
+        root.addView(toolbar, FrameLayout.LayoutParams(-1, -2).apply { setMargins(dp(6f), dp(14f), dp(6f), 0) })
         root.addView(cursor, FrameLayout.LayoutParams(-1, -1))
-        setContentView(root)
+        screenFrame = FrameLayout(this).apply {
+            setBackgroundColor(Ui.BG)
+            addView(root, FrameLayout.LayoutParams(-1, -1))
+        }
+        setContentView(screenFrame)
 
         setupWeb()
         applyUa(false)
         applyMode()
         applyPrefs()
         root.post {
-            curX = root.width / 2f
-            curY = root.height / 2f
+            curX = cursor.width / 2f
+            curY = cursor.height / 2f
             updateCursor()
         }
         open(store.home)
@@ -253,14 +258,14 @@ class MainActivity : Activity() {
             override fun onShowCustomView(view: View, cb: CustomViewCallback) {
                 customView = view
                 customCb = cb
-                root.addView(view, FrameLayout.LayoutParams(-1, -1))
+                screenFrame.addView(view, FrameLayout.LayoutParams(-1, -1))
                 content.visibility = View.GONE
                 toolbar.visibility = View.GONE
                 cursor.visibility = View.GONE
                 showPrompt(false)
             }
             override fun onHideCustomView() {
-                customView?.let { root.removeView(it) }
+                customView?.let { screenFrame.removeView(it) }
                 customView = null
                 customCb?.onCustomViewHidden()
                 customCb = null
@@ -280,7 +285,7 @@ class MainActivity : Activity() {
             val l = (t.trim().firstOrNull() ?: '•').uppercaseChar()
             "<a class=t href=\"${esc(u)}\"><i>$l</i>${esc(t.take(22))}</a>"
         }
-        return """<!doctype html><html lang="ka"><head><meta charset="utf-8">
+        return """<!doctype html><html lang="${getString(R.string.lang_code)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vw;background:#0E1116;color:#F2F4F8;font-family:sans-serif}
 h1{margin:0;font-size:3.2vw}
@@ -292,9 +297,9 @@ input:focus{outline:.25vw solid #6EA8FF}
 .t:focus{outline:.3vw solid #6EA8FF;background:#222833}
 .t i{width:5.4vw;height:5.4vw;border-radius:50%;background:#243049;color:#6EA8FF;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:2.4vw;font-weight:700}
 .add{border-style:dashed;color:#9AA4B2}.add i{background:transparent;border:.15vw dashed #3A4352;color:#9AA4B2}
-</style></head><body><h1>რა გინდა ნახო დღეს?</h1>
-<form action="https://www.google.com/search" method="get"><input name="q" placeholder="ძებნა ან მისამართი" autocomplete="off"></form>
-<div class="g">$tiles<a class="t add" href="tvb://add"><i>+</i>დამატება</a></div></body></html>"""
+</style></head><body><h1>${getString(R.string.start_title)}</h1>
+<form action="https://www.google.com/search" method="get"><input name="q" placeholder="${getString(R.string.search_hint)}" autocomplete="off"></form>
+<div class="g">$tiles<a class="t add" href="tvb://add"><i>+</i>${getString(R.string.add)}</a></div></body></html>"""
     }
 
     private fun open(url: String) {
@@ -342,6 +347,10 @@ input:focus{outline:.25vw solid #6EA8FF}
     private fun applyPrefs() {
         cursor.style(store.cursorSize, CURSOR_COLORS[store.cursorColor.coerceIn(0, CURSOR_COLORS.size - 1)])
         web.settings.textZoom = store.zoom
+        val dm = resources.displayMetrics
+        val ox = (dm.widthPixels * store.overscan / 100f).toInt()
+        val oy = (dm.heightPixels * store.overscan / 100f).toInt()
+        root.setPadding(ox, oy, ox, oy)
         val lp = content.layoutParams as FrameLayout.LayoutParams
         lp.topMargin = if (autoHide()) 0 else tbBottom().toInt()
         content.layoutParams = lp
@@ -369,9 +378,9 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     private fun startDownload(url: String, ua: String?, cd: String?, mime: String?) {
-        if (!url.startsWith("http")) { toast("ამ ტიპის ჩამოტვირთვა ვერ ხერხდება"); return }
+        if (!url.startsWith("http")) { toast(getString(R.string.dl_unsupported)); return }
         val name = URLUtil.guessFileName(url, cd, mime)
-        toast("ჩამოტვირთვა დაიწყო: $name")
+        toast(getString(R.string.dl_started, name))
         Thread {
             try {
                 val c = URL(url).openConnection() as HttpURLConnection
@@ -385,9 +394,9 @@ input:focus{outline:.25vw solid #6EA8FF}
                 while (f.exists()) { f = File(downloadDir(), "($i) $name"); i++ }
                 c.inputStream.use { inp -> f.outputStream().use { out -> inp.copyTo(out) } }
                 val fn = f.name
-                runOnUiThread { toast("ჩამოტვირთულია: $fn") }
+                runOnUiThread { toast(getString(R.string.dl_done, fn)) }
             } catch (e: Exception) {
-                runOnUiThread { toast("ჩამოტვირთვა ვერ მოხერხდა") }
+                runOnUiThread { toast(getString(R.string.dl_failed)) }
             }
         }.start()
     }
@@ -400,7 +409,7 @@ input:focus{outline:.25vw solid #6EA8FF}
         val ext = f.extension.lowercase()
         val ok = ext in listOf("html", "htm", "txt", "jpg", "jpeg", "png", "gif", "webp", "svg",
             "mp4", "webm", "m4v", "mov", "mkv", "mp3", "m4a", "ogg", "wav")
-        if (!ok) { toast("ამ ტიპის ფაილის გახსნა ვერ ხერხდება (.$ext)"); return }
+        if (!ok) { toast(getString(R.string.file_unsupported, ext)); return }
         closeOverlay()
         web.loadUrl(Uri.fromFile(f).toString())
         web.requestFocus()
@@ -414,7 +423,7 @@ input:focus{outline:.25vw solid #6EA8FF}
             }
             startActivityForResult(i, PICK_FILE)
         } catch (e: Exception) {
-            toast("ამ მოწყობილობაზე ფაილის არჩევა ვერ ხერხდება")
+            toast(getString(R.string.pick_unavailable))
         }
     }
 
@@ -479,15 +488,15 @@ input:focus{outline:.25vw solid #6EA8FF}
 
     private fun hover() {
         val t = SystemClock.uptimeMillis()
-        val ev = MotionEvent.obtain(t, t, MotionEvent.ACTION_HOVER_MOVE, curX - content.left, curY - content.top, 0)
+        val ev = MotionEvent.obtain(t, t, MotionEvent.ACTION_HOVER_MOVE, (curX - (content.left - cursor.left)), (curY - (content.top - cursor.top)), 0)
         ev.source = InputDevice.SOURCE_MOUSE
         web.dispatchGenericMotionEvent(ev)
         ev.recycle()
     }
 
     private fun moveBy(dx: Float, dy: Float, toolbarOnTop: Boolean) {
-        val w = root.width.toFloat()
-        val h = root.height.toFloat()
+        val w = cursor.width.toFloat()
+        val h = cursor.height.toFloat()
         val edge = 2f * resources.displayMetrics.density
         val sv = overlayScroll
         val amt = (abs(dy) * 1.5f).toInt()
@@ -506,7 +515,7 @@ input:focus{outline:.25vw solid #6EA8FF}
 
     private fun hit(v: View, x: Float, y: Float): Boolean {
         val rl = IntArray(2)
-        root.getLocationOnScreen(rl)
+        cursor.getLocationOnScreen(rl)
         val l = IntArray(2)
         v.getLocationOnScreen(l)
         val sx = rl[0] + x
@@ -554,7 +563,7 @@ input:focus{outline:.25vw solid #6EA8FF}
             if (tv is EditText) { showBar(false); tv.requestFocus() } else tv.performClick()
             return
         }
-        touchAt(curX - content.left, curY - content.top)
+        touchAt((curX - (content.left - cursor.left)), (curY - (content.top - cursor.top)))
     }
 
     private fun pressKey(code: Int) {
@@ -641,7 +650,8 @@ input:focus{outline:.25vw solid #6EA8FF}
     private fun ensureServer(): RemoteServer {
         val s = server ?: RemoteServer(
             { msg -> runOnUiThread { onRemote(msg) } },
-            { n -> runOnUiThread { connectStatus?.let { it.text = if (n > 0) "● ტელეფონი დაკავშირებულია" else "ელოდება ტელეფონს…" } } }
+            { n -> runOnUiThread { connectStatus?.let { it.text = if (n > 0) getString(R.string.phone_connected_dot) else getString(R.string.waiting_phone) } } },
+            { RemotePage.render(this) }
         )
         server = s
         return s
@@ -653,7 +663,7 @@ input:focus{outline:.25vw solid #6EA8FF}
         val ip = localIp()
         val url = if (ok && ip != null) "http://$ip:${srv.port}/?k=${srv.token}" else null
         val (view, status) = ConnectUi.build(this, url, { closeOverlay() }, {
-            srv.stop(); server = null; closeOverlay(); toast("ტელეფონი გათიშულია")
+            srv.stop(); server = null; closeOverlay(); toast(getString(R.string.phone_disconnected))
         })
         connectStatus = status
         showOverlay(view)
@@ -776,8 +786,8 @@ input:focus{outline:.25vw solid #6EA8FF}
             onUa = { uaMode = store.ua; applyUa(true) },
             onPrefs = { applyPrefs() },
             openSync = { showSync() },
-            clearHistory = { store.clearHistory(); toast("ისტორია წაიშალა") },
-            clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast("Cookie-ები წაიშალა") },
+            clearHistory = { store.clearHistory(); toast(getString(R.string.history_cleared)) },
+            clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast(getString(R.string.cookies_cleared)) },
             onUpdate = { checkUpdate() }
         )
         showOverlay(SettingsUi.build(this, store, a) { closeOverlay() })
@@ -792,34 +802,34 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     private fun addSite(name: String, address: String) {
-        if (address.isBlank()) { toast("მისამართი ცარიელია"); return }
+        if (address.isBlank()) { toast(getString(R.string.address_empty)); return }
         val url = normUrl(address)
         val title = name.ifBlank { Uri.parse(url).host?.removePrefix("www.") ?: url }
         store.addBookmark(title, url)
-        toast("დაემატა: $title")
+        toast(getString(R.string.added_named, title))
         closeOverlay()
         if (startShown) open(HOME)
     }
 
     private fun showBookmarks() {
-        showOverlay(ListUi.build(this, "სანიშნეები", store.bookmarks(),
+        showOverlay(ListUi.build(this, getString(R.string.bookmarks), store.bookmarks(),
             { u -> closeOverlay(); go(u) },
             { u -> store.removeBookmark(u); showBookmarks(); if (startShown) open(HOME) },
             listOf(
-                "ამ გვერდის დამატება" to {
+                getString(R.string.add_this_page) to {
                     val u = web.url
                     if (u != null && !u.startsWith(START_BASE)) {
-                        store.addBookmark(web.title ?: u, u); toast("სანიშნე დაემატა"); showBookmarks()
+                        store.addBookmark(web.title ?: u, u); toast(getString(R.string.bookmark_added)); showBookmarks()
                     }
                 },
-                "ახალი საიტი" to { showAddSite() }
+                getString(R.string.new_site) to { showAddSite() }
             )) { closeOverlay() })
     }
 
     private fun showHistory() {
-        showOverlay(ListUi.build(this, "ისტორია", store.history(),
+        showOverlay(ListUi.build(this, getString(R.string.history), store.history(),
             { u -> closeOverlay(); go(u) }, null,
-            listOf("გასუფთავება" to { store.clearHistory(); showHistory() })) { closeOverlay() })
+            listOf(getString(R.string.clear) to { store.clearHistory(); showHistory() })) { closeOverlay() })
     }
 
     // ------------------------------------------------------------ volume and updates
@@ -838,8 +848,8 @@ input:focus{outline:.25vw solid #6EA8FF}
 
     private fun checkUpdate() {
         val url = store.updateUrl
-        if (url.isBlank()) { toast("განახლების ბმული არ არის მითითებული"); return }
-        toast("მოწმდება…")
+        if (url.isBlank()) { toast(getString(R.string.update_url_missing)); return }
+        toast(getString(R.string.checking))
         Thread {
             try {
                 val c = URL(url).openConnection() as HttpURLConnection
@@ -848,18 +858,18 @@ input:focus{outline:.25vw solid #6EA8FF}
                 c.readTimeout = 60000
                 if (c.responseCode != 200) {
                     val code = c.responseCode
-                    runOnUiThread { toast("განახლება ვერ მოიძებნა ($code)") }
+                    runOnUiThread { toast(getString(R.string.update_not_found, code)) }
                     return@Thread
                 }
                 val tag = c.getHeaderField("ETag") ?: c.getHeaderField("Last-Modified") ?: c.contentLength.toString()
                 val f = File(downloadDir(), "update.apk")
                 if (tag == store.updateTag) {
                     c.disconnect()
-                    runOnUiThread { toast("უახლესი ვერსიაა") }
+                    runOnUiThread { toast(getString(R.string.up_to_date)) }
                     return@Thread
                 }
                 if (!(tag == store.pendingTag && f.exists())) {
-                    runOnUiThread { toast("იტვირთება ახალი ვერსია…") }
+                    runOnUiThread { toast(getString(R.string.downloading_update)) }
                     c.inputStream.use { i -> f.outputStream().use { o -> i.copyTo(o) } }
                     store.pendingTag = tag
                 } else {
@@ -867,7 +877,7 @@ input:focus{outline:.25vw solid #6EA8FF}
                 }
                 runOnUiThread { installApk(f) }
             } catch (e: Exception) {
-                runOnUiThread { toast("განახლება ვერ მოხერხდა") }
+                runOnUiThread { toast(getString(R.string.update_failed)) }
             }
         }.start()
     }
@@ -875,7 +885,7 @@ input:focus{outline:.25vw solid #6EA8FF}
     private fun installApk(f: File) {
         try {
             if (Build.VERSION.SDK_INT >= 26 && !packageManager.canRequestPackageInstalls()) {
-                toast("ჩართე უცნობი აპების დაყენება ამ აპისთვის და ისევ დააჭირე განახლებას")
+                toast(getString(R.string.allow_unknown))
                 startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:$packageName")))
                 return
             }
@@ -885,7 +895,7 @@ input:focus{outline:.25vw solid #6EA8FF}
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(i)
         } catch (e: Exception) {
-            toast("ინსტალაცია ვერ გაიხსნა")
+            toast(getString(R.string.install_failed))
         }
     }
 

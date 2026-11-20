@@ -1,10 +1,10 @@
 package com.example.tvbrowser
 
 object RemotePage {
-    const val HTML = """<!doctype html>
-<html lang="ka"><head><meta charset="utf-8">
+    private const val HTML = """<!doctype html>
+<html lang="@@lang_code@@"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>TV პულტი</title>
+<title>@@remote_title@@</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;background:#0E1116;color:#F2F4F8;font-family:system-ui,'Noto Sans Georgian',sans-serif;touch-action:none}
@@ -65,43 +65,43 @@ body.m1 #dw{display:flex}
 <symbol id="vd" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/></symbol>
 <symbol id="vu" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
 </defs></svg>
-<header><div class="st"><span id="dot"></span><span id="stx">კავშირი…</span></div>
-<div class="seg"><button id="m0" class="on" aria-label="მაუსი"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="ღილაკები"><svg class="i"><use href="#dp"/></svg></button></div></header>
+<header><div class="st"><span id="dot"></span><span id="stx">@@remote_connecting@@</span></div>
+<div class="seg"><button id="m0" class="on" aria-label="@@remote_mouse@@"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="@@remote_buttons@@"><svg class="i"><use href="#dp"/></svg></button></div></header>
 <div id="pad"><div id="scr"><i></i></div></div>
 <div id="nav">
-<button data-a="fwd" aria-label="წინ"><svg class="i"><use href="#fwd"/></svg></button>
-<button data-a="reload" aria-label="განახლება"><svg class="i"><use href="#reload"/></svg></button>
-<button data-a="bm" aria-label="სანიშნეები"><svg class="i"><use href="#bm"/></svg></button>
-<button data-a="hist" aria-label="ისტორია"><svg class="i"><use href="#hist"/></svg></button>
-<button data-a="files" aria-label="ფაილები"><svg class="i"><use href="#files"/></svg></button>
-<button data-a="url" aria-label="მისამართი"><svg class="i"><use href="#url"/></svg></button>
-<button data-a="set" aria-label="პარამეტრები"><svg class="i"><use href="#set"/></svg></button>
-<button data-a="ua" aria-label="საიტის ვერსია"><svg class="i"><use href="#desk"/></svg></button>
+<button data-a="fwd" aria-label="@@remote_forward@@"><svg class="i"><use href="#fwd"/></svg></button>
+<button data-a="reload" aria-label="@@remote_reload@@"><svg class="i"><use href="#reload"/></svg></button>
+<button data-a="bm" aria-label="@@remote_bookmarks@@"><svg class="i"><use href="#bm"/></svg></button>
+<button data-a="hist" aria-label="@@remote_history@@"><svg class="i"><use href="#hist"/></svg></button>
+<button data-a="files" aria-label="@@remote_files@@"><svg class="i"><use href="#files"/></svg></button>
+<button data-a="url" aria-label="@@remote_address@@"><svg class="i"><use href="#url"/></svg></button>
+<button data-a="set" aria-label="@@remote_settings@@"><svg class="i"><use href="#set"/></svg></button>
+<button data-a="ua" aria-label="@@remote_site_version@@"><svg class="i"><use href="#desk"/></svg></button>
 </div>
 <div id="dw"><div id="dpad">
-<button class="u" data-d="up" aria-label="ზევით"><svg class="i"><use href="#up"/></svg></button>
-<button class="dn" data-d="dn" aria-label="ქვევით"><svg class="i"><use href="#dn"/></svg></button>
-<button class="l" data-d="l" aria-label="მარცხნივ"><svg class="i"><use href="#back"/></svg></button>
-<button class="r" data-d="r" aria-label="მარჯვნივ"><svg class="i"><use href="#fwd"/></svg></button>
+<button class="u" data-d="up" aria-label="@@remote_up@@"><svg class="i"><use href="#up"/></svg></button>
+<button class="dn" data-d="dn" aria-label="@@remote_down@@"><svg class="i"><use href="#dn"/></svg></button>
+<button class="l" data-d="l" aria-label="@@remote_left@@"><svg class="i"><use href="#back"/></svg></button>
+<button class="r" data-d="r" aria-label="@@remote_right@@"><svg class="i"><use href="#fwd"/></svg></button>
 <button class="ok" data-k="ok">OK</button>
 </div></div>
 <div class="r1">
-<button data-k="back" aria-label="უკან"><svg class="i"><use href="#back"/></svg></button>
-<button class="home" data-a="home" aria-label="მთავარი"><svg class="i"><use href="#home"/></svg></button>
-<button class="acc" data-k="full" aria-label="სრული ეკრანი"><svg class="i"><use href="#full"/></svg></button>
+<button data-k="back" aria-label="@@remote_back@@"><svg class="i"><use href="#back"/></svg></button>
+<button class="home" data-a="home" aria-label="@@remote_home@@"><svg class="i"><use href="#home"/></svg></button>
+<button class="acc" data-k="full" aria-label="@@remote_fullscreen@@"><svg class="i"><use href="#full"/></svg></button>
 </div>
 <div class="r2">
-<button class="mute" data-v="mute" aria-label="ხმის გამორთვა"><svg class="i"><use href="#vm"/></svg></button>
-<div class="vol"><button data-v="dn" aria-label="ხმა −"><svg class="i"><use href="#vd"/></svg></button><button data-v="up" aria-label="ხმა +"><svg class="i"><use href="#vu"/></svg></button></div>
+<button class="mute" data-v="mute" aria-label="@@remote_mute@@"><svg class="i"><use href="#vm"/></svg></button>
+<div class="vol"><button data-v="dn" aria-label="@@remote_vol_down@@"><svg class="i"><use href="#vd"/></svg></button><button data-v="up" aria-label="@@remote_vol_up@@"><svg class="i"><use href="#vu"/></svg></button></div>
 </div>
-<div class="tx"><input id="t" placeholder="ტექსტის აკრეფა…" autocomplete="off" autocapitalize="off"><button id="send">გაგზავნა</button></div>
+<div class="tx"><input id="t" placeholder="@@remote_type@@" autocomplete="off" autocapitalize="off"><button id="send">@@remote_send@@</button></div>
 <script>
 var g=function(i){return document.getElementById(i)};
 var K=new URLSearchParams(location.search).get('k'),ws=null,mode=0;
 function conn(){
  ws=new WebSocket('ws://'+location.host+'/ws?k='+K);
- ws.onopen=function(){g('dot').className='ok';g('stx').textContent='დაკავშირებულია';send('mode '+mode);};
- ws.onclose=function(){g('dot').className='';g('stx').textContent='კავშირი…';setTimeout(conn,1000);};
+ ws.onopen=function(){g('dot').className='ok';g('stx').textContent='@@remote_connected@@';send('mode '+mode);};
+ ws.onclose=function(){g('dot').className='';g('stx').textContent='@@remote_connecting@@';setTimeout(conn,1000);};
 }
 function send(s){if(ws&&ws.readyState==1)ws.send(s);}
 function setMode(m){mode=m;g('m0').className=m==0?'on':'';g('m1').className=m==1?'on':'';
@@ -126,4 +126,13 @@ ti.addEventListener('keydown',function(e){
 });
 conn();
 </script></body></html>"""
+
+    /** Fills the @@key@@ tokens from the app's string resources (so the page follows the TV language). */
+    fun render(ctx: android.content.Context): String {
+        val res = ctx.resources
+        return Regex("@@([a-z_]+)@@").replace(HTML) { m ->
+            val id = res.getIdentifier(m.groupValues[1], "string", ctx.packageName)
+            if (id == 0) m.value else res.getString(id)
+        }
+    }
 }

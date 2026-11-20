@@ -6,6 +6,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
@@ -32,51 +34,72 @@ object SettingsUi {
 
     fun build(ctx: Context, s: Store, a: Actions, close: () -> Unit): View {
         val mouse = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "მაუსი"))
-            addView(Ui.row(ctx, "კურსორის სიჩქარე", Ui.seek(ctx, 1, 10, s.speed) { s.speed = it }))
-            addView(Ui.row(ctx, "აჩქარება დაჭერისას", Ui.seek(ctx, 0, 10, s.accel) { s.accel = it }))
-            addView(Ui.row(ctx, "კურსორის ზომა", Ui.seg(ctx, listOf("S", "M", "L"), s.cursorSize) { s.cursorSize = it; a.onPrefs() }))
-            addView(Ui.row(ctx, "კურსორის ფერი", Ui.swatches(ctx, MainActivity.CURSOR_COLORS, s.cursorColor) { s.cursorColor = it; a.onPrefs() }))
+            addView(Ui.heading(ctx, ctx.getString(R.string.mouse)))
+            addView(Ui.row(ctx, ctx.getString(R.string.cursor_speed), Ui.seek(ctx, 1, 10, s.speed) { s.speed = it }))
+            addView(Ui.row(ctx, ctx.getString(R.string.acceleration), Ui.seek(ctx, 0, 10, s.accel) { s.accel = it }))
+            addView(Ui.row(ctx, ctx.getString(R.string.cursor_size), Ui.seg(ctx, listOf("S", "M", "L"), s.cursorSize) { s.cursorSize = it; a.onPrefs() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.cursor_color), Ui.swatches(ctx, MainActivity.CURSOR_COLORS, s.cursorColor) { s.cursorColor = it; a.onPrefs() }))
         }
         val control = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "მართვა"))
-            addView(Ui.row(ctx, "რეჟიმი", Ui.seg(ctx, listOf("მაუსი", "ღილაკები"), if (s.mouse) 0 else 1) { s.mouse = it == 0; a.onMode() }))
-            addView(Ui.row(ctx, "გადახვევის სიჩქარე", Ui.seek(ctx, 1, 10, s.scrollSpeed) { s.scrollSpeed = it }))
+            addView(Ui.heading(ctx, ctx.getString(R.string.control)))
+            addView(Ui.row(ctx, ctx.getString(R.string.mode), Ui.seg(ctx, listOf(ctx.getString(R.string.mouse), ctx.getString(R.string.buttons)), if (s.mouse) 0 else 1) { s.mouse = it == 0; a.onMode() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.scroll_speed), Ui.seek(ctx, 1, 10, s.scrollSpeed) { s.scrollSpeed = it }))
         }
         val zooms = listOf(75, 100, 125, 150)
-        val homeField = Ui.field(ctx, "ცარიელი = საწყისი ეკრანი", if (s.home == "tvb:home") "" else s.home).apply {
+        val margins = listOf(0, 3, 5, 8, 10)
+        val homeField = Ui.field(ctx, ctx.getString(R.string.home_hint), if (s.home == "tvb:home") "" else s.home).apply {
             layoutParams = LinearLayout.LayoutParams(Ui.dp(ctx, 320f), Ui.dp(ctx, 52f))
         }
         Ui.onText(homeField) { t -> s.home = if (t.isBlank()) "tvb:home" else t.trim() }
         val browser = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "ბრაუზერი"))
-            addView(Ui.row(ctx, "საიტის ვერსია", Ui.seg(ctx, MainActivity.UA_NAMES, s.ua) { s.ua = it; a.onUa() }))
-            addView(Ui.row(ctx, "ტექსტის მასშტაბი", Ui.seg(ctx, zooms.map { "$it%" }, zooms.indexOf(s.zoom).coerceAtLeast(1)) { s.zoom = zooms[it]; a.onPrefs() }))
-            addView(Ui.row(ctx, "საწყისი გვერდი", homeField))
-            addView(Ui.row(ctx, "პანელის ავტომატური დამალვა", Ui.seg(ctx, listOf("გამორთ.", "ჩართ."), if (s.autohide) 1 else 0) { s.autohide = it == 1; a.onPrefs() }))
+            addView(Ui.heading(ctx, ctx.getString(R.string.browser)))
+            addView(Ui.row(ctx, ctx.getString(R.string.site_version), Ui.seg(ctx, MainActivity.UA_NAMES, s.ua) { s.ua = it; a.onUa() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.text_scale), Ui.seg(ctx, zooms.map { "$it%" }, zooms.indexOf(s.zoom).coerceAtLeast(1)) { s.zoom = zooms[it]; a.onPrefs() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.overscan), Ui.seg(ctx, margins.map { "$it%" }, margins.indexOf(s.overscan).coerceAtLeast(0)) { s.overscan = margins[it]; a.onPrefs() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.home_page), homeField))
+            addView(Ui.row(ctx, ctx.getString(R.string.autohide), Ui.seg(ctx, listOf(ctx.getString(R.string.off), ctx.getString(R.string.on)), if (s.autohide) 1 else 0) { s.autohide = it == 1; a.onPrefs() }))
         }
         val data = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "მონაცემები"))
-            addView(Ui.row(ctx, "ისტორია", Ui.button(ctx, "გასუფთავება", false, 16f) { a.clearHistory() }))
-            addView(Ui.row(ctx, "Cookie-ები და შესვლები", Ui.button(ctx, "გასუფთავება", false, 16f) { a.clearCookies() }))
-            addView(Ui.row(ctx, "სინქრონიზაცია", Ui.button(ctx, "გახსნა", true, 16f) { a.openSync() }))
+            addView(Ui.heading(ctx, ctx.getString(R.string.data)))
+            addView(Ui.row(ctx, ctx.getString(R.string.history), Ui.button(ctx, ctx.getString(R.string.clear), false, 16f) { a.clearHistory() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.cookies_logins), Ui.button(ctx, ctx.getString(R.string.clear), false, 16f) { a.clearCookies() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.sync), Ui.button(ctx, ctx.getString(R.string.open), true, 16f) { a.openSync() }))
         }
         val urlField = Ui.field(ctx, "https://github.com/.../app-debug.apk", s.updateUrl).apply {
             layoutParams = LinearLayout.LayoutParams(Ui.dp(ctx, 320f), Ui.dp(ctx, 52f))
         }
         Ui.onText(urlField) { t -> s.updateUrl = t.trim() }
         val update = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "განახლება"))
-            addView(Ui.row(ctx, "ვერსია", TextView(ctx).apply { text = BuildConfig.VERSION_NAME; setTextColor(Ui.MUTED); px(18f) }))
-            addView(Ui.row(ctx, "განახლების ბმული", urlField))
-            addView(Ui.row(ctx, "ახალი ვერსია", Ui.button(ctx, "განახლება", true, 16f) { a.onUpdate() }))
+            addView(Ui.heading(ctx, ctx.getString(R.string.update)))
+            addView(Ui.row(ctx, ctx.getString(R.string.version), TextView(ctx).apply { text = BuildConfig.VERSION_NAME; setTextColor(Ui.MUTED); px(18f) }))
+            addView(Ui.row(ctx, ctx.getString(R.string.update_link), urlField))
+            addView(Ui.row(ctx, ctx.getString(R.string.new_version), Ui.button(ctx, ctx.getString(R.string.update), true, 16f) { a.onUpdate() }))
         }
-        return Ui.screen(ctx, "პარამეტრები", close, Ui.twoCols(ctx, listOf(mouse, control, update), listOf(browser, data)))
+        return Ui.screen(ctx, ctx.getString(R.string.settings), close, Ui.twoCols(ctx, listOf(mouse, control, update), listOf(browser, data)))
     }
 }
 
 object SyncUi {
     private fun toast(ctx: Context, m: String) = Toast.makeText(ctx, m, Toast.LENGTH_SHORT).show()
+    private val ID_RE = Regex("^usr_[a-z0-9]{6,}$")
+
+    private fun work(ctx: Context, s: Store, push: Boolean, done: () -> Unit) {
+        if (!Cloud.configured()) { toast(ctx, ctx.getString(R.string.no_firebase)); return }
+        val id = s.syncId ?: s.deviceId
+        toast(ctx, ctx.getString(R.string.working))
+        Thread {
+            val msg = try {
+                val remote = Cloud.get(id)
+                if (remote != null) { s.mergeBookmarks(remote.bookmarks); s.mergeHistory(remote.history) }
+                if (push) Cloud.put(id, Cloud.Data(s.bookmarksJson(), s.historyJson()))
+                if (remote == null && !push) ctx.getString(R.string.nothing_in_cloud)
+                else ctx.getString(if (push) R.string.sync_done else R.string.download_done, s.bookmarks().size, s.history().size)
+            } catch (e: Exception) {
+                ctx.getString(R.string.sync_failed, e.message ?: "")
+            }
+            Handler(Looper.getMainLooper()).post { toast(ctx, msg); done() }
+        }.start()
+    }
 
     fun build(ctx: Context, s: Store, close: () -> Unit): View {
         var hidden = false
@@ -92,56 +115,66 @@ object SyncUi {
             setPadding(Ui.dp(ctx, 14f), Ui.dp(ctx, 14f), Ui.dp(ctx, 14f), Ui.dp(ctx, 14f))
             addView(qrImg, FrameLayout.LayoutParams(Ui.dp(ctx, 170f), Ui.dp(ctx, 170f)))
         }
+        val status = TextView(ctx).apply { setTextColor(Ui.MUTED); px(16f) }
+        val counts = TextView(ctx).apply { setTextColor(Ui.MUTED); px(16f) }
         fun refresh() {
             idView.text = if (hidden) "usr_••••••••••••••" else s.deviceId
             qrImg.setImageBitmap(ConnectUi.qr(s.deviceId, Ui.dp(ctx, 170f)))
             qrBox.visibility = if (hidden) View.INVISIBLE else View.VISIBLE
+            val sid = s.syncId
+            status.text = if (sid == null) ctx.getString(R.string.syncing_own) else ctx.getString(R.string.syncing_with, sid)
+            counts.text = ctx.getString(R.string.counts, s.bookmarks().size, s.history().size)
         }
         refresh()
+        val wrapLp = { LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT) }
         val idRow = LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(idView, LinearLayout.LayoutParams(0, Ui.dp(ctx, 52f), 1f))
-            addView(Ui.button(ctx, "დამალვა", false, 16f) { hidden = !hidden; refresh() },
+            addView(Ui.button(ctx, ctx.getString(R.string.hide), false, 16f) { hidden = !hidden; refresh() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
         }
         val idCard = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "შენი მოწყობილობის ID"))
+            addView(Ui.heading(ctx, ctx.getString(R.string.your_id)))
             addView(idRow)
-            addView(Ui.note(ctx, "დაასკანერე ტელეფონით, რომ ID გადაიტანო სხვა მოწყობილობაზე."),
+            addView(Ui.note(ctx, ctx.getString(R.string.scan_id)),
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 14f) })
-            addView(qrBox, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 12f) })
+            addView(qrBox, wrapLp().apply { bottomMargin = Ui.dp(ctx, 12f) })
         }
 
-        val other = Ui.field(ctx, "ჩასვი ID (მაგ: usr_...)")
+        val other = Ui.field(ctx, ctx.getString(R.string.paste_id))
         val connect = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "სხვა მოწყობილობის დაკავშირება"))
-            addView(Ui.note(ctx, "შეიყვანე სხვა მოწყობილობის ID იმავე მონაცემებზე წვდომისთვის. აკრეფა შეგიძლია ტელეფონითაც."))
+            addView(Ui.heading(ctx, ctx.getString(R.string.connect_other)))
+            addView(Ui.note(ctx, ctx.getString(R.string.connect_other_hint)))
             addView(other, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(ctx, 52f)))
+            addView(status, wrapLp().apply { topMargin = Ui.dp(ctx, 12f) })
             addView(LinearLayout(ctx).apply {
-                addView(Ui.button(ctx, "დაკავშირება", true, 16f) { toast(ctx, "Firebase ჯერ არ არის მიერთებული") },
-                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)))
-                addView(Ui.button(ctx, "ახალი ID", false, 16f) { s.newDeviceId(); refresh(); toast(ctx, "ახალი ID შეიქმნა") },
+                addView(Ui.button(ctx, ctx.getString(R.string.connect), true, 16f) {
+                    val id = other.text.toString().trim().lowercase()
+                    if (!ID_RE.matches(id)) toast(ctx, ctx.getString(R.string.invalid_id))
+                    else { s.syncId = if (id == s.deviceId) null else id; refresh(); toast(ctx, ctx.getString(R.string.connected)) }
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)))
+                addView(Ui.button(ctx, ctx.getString(R.string.use_own_id), false, 16f) { s.syncId = null; refresh() },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = Ui.dp(ctx, 14f); bottomMargin = Ui.dp(ctx, 10f)
-            })
+                addView(Ui.button(ctx, ctx.getString(R.string.new_id), false, 16f) { s.syncId = null; s.newDeviceId(); refresh(); toast(ctx, ctx.getString(R.string.new_id_created)) },
+                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
+            }, wrapLp().apply { topMargin = Ui.dp(ctx, 14f); bottomMargin = Ui.dp(ctx, 10f) })
         }
 
         val data = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "მონაცემები"))
-            addView(Ui.note(ctx, "ბუქმარკები: ${s.bookmarks().size}    ისტორია: ${s.history().size}    ღრუბელი: —"))
+            addView(Ui.heading(ctx, ctx.getString(R.string.data)))
+            addView(counts, wrapLp().apply { bottomMargin = Ui.dp(ctx, 14f) })
             addView(LinearLayout(ctx).apply {
-                addView(Ui.button(ctx, "სინქრონიზაცია", true, 18f) { toast(ctx, "Firebase ჯერ არ არის მიერთებული") },
+                addView(Ui.button(ctx, ctx.getString(R.string.sync), true, 18f) { work(ctx, s, true) { refresh() } },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)))
-                addView(Ui.button(ctx, "გადმოწერა", false, 18f) { toast(ctx, "Firebase ჯერ არ არის მიერთებული") },
+                addView(Ui.button(ctx, ctx.getString(R.string.download), false, 18f) { work(ctx, s, false) { refresh() } },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)).apply { marginStart = Ui.dp(ctx, 10f) })
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 10f) })
+            }, wrapLp().apply { bottomMargin = Ui.dp(ctx, 10f) })
         }
         val safety = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "უსაფრთხოება"))
-            addView(Ui.note(ctx, "ID მუშაობს როგორც პაროლი: ვისაც ის აქვს, ამ ბუქმარკებსა და ისტორიას ნახავს. არ გაუზიარო უცნობს."))
+            addView(Ui.heading(ctx, ctx.getString(R.string.security)))
+            addView(Ui.note(ctx, ctx.getString(R.string.security_note)))
         }
-        return Ui.screen(ctx, "სინქრონიზაცია", close, Ui.twoCols(ctx, listOf(idCard, connect), listOf(data, safety)))
+        return Ui.screen(ctx, ctx.getString(R.string.sync), close, Ui.twoCols(ctx, listOf(idCard, connect), listOf(data, safety)))
     }
 }
 
@@ -176,29 +209,29 @@ object ConnectUi {
             card.addView(box, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = Ui.dp(ctx, 48f) })
         }
         val status = TextView(ctx).apply {
-            text = "ელოდება ტელეფონს…"; setTextColor(Ui.MUTED); px(20f)
+            text = ctx.getString(R.string.waiting_phone); setTextColor(Ui.MUTED); px(20f)
         }
         val right = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         right.addView(TextView(ctx).apply {
-            text = "ტელეფონის დაკავშირება"; setTextColor(Ui.TEXT); px(32f); typeface = Typeface.DEFAULT_BOLD
+            text = ctx.getString(R.string.connect_phone); setTextColor(Ui.TEXT); px(32f); typeface = Typeface.DEFAULT_BOLD
         })
         listOf(
-            "1. ტელეფონი და ტელევიზორი ერთ Wi-Fi-ზე შეაერთე",
-            "2. დაასკანერე QR კოდი კამერით",
-            "3. ტელეფონი გახდება ტრეკპადი და კლავიატურა"
+            ctx.getString(R.string.step1),
+            ctx.getString(R.string.step2),
+            ctx.getString(R.string.step3)
         ).forEach {
             right.addView(TextView(ctx).apply { text = it; setTextColor(Ui.TEXT); px(20f); setPadding(0, Ui.dp(ctx, 14f), 0, 0) })
         }
         right.addView(TextView(ctx).apply {
-            text = url ?: "Wi-Fi ვერ ვიპოვე. შეაერთე ტელევიზორი ქსელში."
+            text = url ?: ctx.getString(R.string.no_wifi)
             setTextColor(Ui.TEXT); px(18f); typeface = Typeface.MONOSPACE
             background = Ui.rect(ctx, Ui.BG, 22f, Ui.LINE, 1f)
             setPadding(Ui.dp(ctx, 20f), Ui.dp(ctx, 14f), Ui.dp(ctx, 20f), Ui.dp(ctx, 14f))
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 24f) })
         right.addView(status, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 20f) })
         right.addView(LinearLayout(ctx).apply {
-            addView(Ui.button(ctx, "დახურვა", true, 18f) { onClose() }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 56f)))
-            addView(Ui.button(ctx, "გათიშვა", false, 18f) { onStop() },
+            addView(Ui.button(ctx, ctx.getString(R.string.close), true, 18f) { onClose() }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 56f)))
+            addView(Ui.button(ctx, ctx.getString(R.string.disconnect), false, 18f) { onStop() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 56f)).apply { marginStart = Ui.dp(ctx, 12f) })
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = Ui.dp(ctx, 24f) })
         card.addView(right)
@@ -215,13 +248,13 @@ object FilesUi {
         fun refresh() {
             list.removeAllViews()
             val files = (dir.listFiles() ?: emptyArray<File>()).filter { it.isFile }.sortedByDescending { it.lastModified() }
-            if (files.isEmpty()) list.addView(Ui.note(ctx, "ფაილები ჯერ არ არის. ჩამოტვირთე ფაილი საიტზე ბმულზე დაჭერით."))
+            if (files.isEmpty()) list.addView(Ui.note(ctx, ctx.getString(R.string.no_files)))
             files.forEach { f ->
                 val row = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
                 val ob = Ui.button(ctx, f.name + "   (" + fmt(f.length()) + ")", false, 16f) { onOpen(f) }
                 ob.gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 row.addView(ob, LinearLayout.LayoutParams(0, Ui.dp(ctx, 52f), 1f))
-                row.addView(Ui.button(ctx, "წაშლა", false, 16f) { f.delete(); refresh() },
+                row.addView(Ui.button(ctx, ctx.getString(R.string.delete), false, 16f) { f.delete(); refresh() },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
                 list.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 10f) })
             }
@@ -229,12 +262,12 @@ object FilesUi {
         refresh()
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            addView(Ui.note(ctx, "საქაღალდე: " + dir.absolutePath))
-            addView(Ui.button(ctx, "სხვა ფაილის არჩევა…", true, 16f) { onPick() },
+            addView(Ui.note(ctx, ctx.getString(R.string.folder_label, dir.absolutePath)))
+            addView(Ui.button(ctx, ctx.getString(R.string.pick_file), true, 16f) { onPick() },
                 LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { bottomMargin = Ui.dp(ctx, 16f) })
             addView(list)
         }
-        return Ui.screen(ctx, "ფაილები", close, body)
+        return Ui.screen(ctx, ctx.getString(R.string.files), close, body)
     }
 }
 
@@ -253,7 +286,7 @@ object ListUi {
             }
             body.addView(bar, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 18f) })
         }
-        if (items.isEmpty()) body.addView(Ui.note(ctx, "ცარიელია"))
+        if (items.isEmpty()) body.addView(Ui.note(ctx, ctx.getString(R.string.empty)))
         items.forEach { (t, u) ->
             val row = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
             val ob = Ui.button(ctx, t.ifBlank { u } + "\n" + u, false, 15f) { onOpen(u) }
@@ -263,7 +296,7 @@ object ListUi {
             ob.setPadding(Ui.dp(ctx, 18f), Ui.dp(ctx, 8f), Ui.dp(ctx, 18f), Ui.dp(ctx, 8f))
             row.addView(ob, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
             if (onDelete != null) {
-                row.addView(Ui.button(ctx, "წაშლა", false, 15f) { onDelete(u) },
+                row.addView(Ui.button(ctx, ctx.getString(R.string.delete), false, 15f) { onDelete(u) },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
             }
             body.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = Ui.dp(ctx, 10f) })
@@ -274,17 +307,17 @@ object ListUi {
 
 object AddSiteUi {
     fun build(ctx: Context, onAdd: (String, String) -> Unit, close: () -> Unit): View {
-        val n = Ui.field(ctx, "სახელი (არასავალდებულო)")
-        val u = Ui.field(ctx, "მისამართი, მაგ. youtube.com")
+        val n = Ui.field(ctx, ctx.getString(R.string.name_optional))
+        val u = Ui.field(ctx, ctx.getString(R.string.address_example))
         val card = Ui.card(ctx).apply {
-            addView(Ui.heading(ctx, "ახალი საიტი"))
-            addView(Ui.note(ctx, "ტექსტის აკრეფა შეგიძლია ტელეფონითაც (პანელზე ღილაკი ტელეფონი)."))
+            addView(Ui.heading(ctx, ctx.getString(R.string.new_site)))
+            addView(Ui.note(ctx, ctx.getString(R.string.type_with_phone)))
             addView(n, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(ctx, 52f)))
             addView(u, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(ctx, 52f)).apply { topMargin = Ui.dp(ctx, 12f) })
             addView(LinearLayout(ctx).apply {
-                addView(Ui.button(ctx, "დამატება", true, 18f) { onAdd(n.text.toString(), u.text.toString()) },
+                addView(Ui.button(ctx, ctx.getString(R.string.add), true, 18f) { onAdd(n.text.toString(), u.text.toString()) },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 56f)))
-                addView(Ui.button(ctx, "გაუქმება", false, 18f) { close() },
+                addView(Ui.button(ctx, ctx.getString(R.string.cancel), false, 18f) { close() },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 56f)).apply { marginStart = Ui.dp(ctx, 10f) })
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = Ui.dp(ctx, 18f); bottomMargin = Ui.dp(ctx, 10f)
@@ -292,6 +325,6 @@ object AddSiteUi {
         }
         val wrap = LinearLayout(ctx)
         wrap.addView(card, LinearLayout.LayoutParams(Ui.dp(ctx, 760f), LinearLayout.LayoutParams.WRAP_CONTENT))
-        return Ui.screen(ctx, "საიტის დამატება", close, wrap)
+        return Ui.screen(ctx, ctx.getString(R.string.add_site), close, wrap)
     }
 }

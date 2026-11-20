@@ -11,7 +11,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 /** Tiny HTTP + WebSocket server: serves the phone remote page and receives commands. */
 class RemoteServer(
     private val onMsg: (String) -> Unit,
-    private val onClients: (Int) -> Unit
+    private val onClients: (Int) -> Unit,
+    private val page: () -> String
 ) {
     val token: String = (1..6).map { "abcdefghijkmnpqrstuvwxyz23456789".random() }.joinToString("")
     var port = 8080
@@ -97,7 +98,7 @@ class RemoteServer(
                 ws(c, inp, out, headers["sec-websocket-key"] ?: "")
                 return
             }
-            respond(out, 200, "text/html; charset=utf-8", RemotePage.HTML)
+            respond(out, 200, "text/html; charset=utf-8", page())
             c.close()
         } catch (e: Exception) {
             try { c.close() } catch (_: Exception) {}

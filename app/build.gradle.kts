@@ -5,6 +5,8 @@ plugins {
 
 val repo = System.getenv("GITHUB_REPOSITORY") ?: ""
 val run = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 2
+val fbKey = System.getenv("FIREBASE_API_KEY") ?: ""
+val fbProject = System.getenv("FIREBASE_PROJECT_ID") ?: ""
 
 android {
     namespace = "com.example.tvbrowser"
@@ -17,6 +19,8 @@ android {
         versionName = "2.$run"
         val updateUrl = if (repo.isEmpty()) "" else "https://github.com/$repo/releases/download/latest/app-debug.apk"
         buildConfigField("String", "UPDATE_URL", "\"$updateUrl\"")
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$fbKey\"")
+        buildConfigField("String", "FIREBASE_PROJECT_ID", "\"$fbProject\"")
     }
     buildFeatures { buildConfig = true }
     signingConfigs {

@@ -1,11 +1,15 @@
 package com.example.tvbrowser
 
+import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
 import org.json.JSONArray
 import org.json.JSONObject
 
 class Store(ctx: Context) {
     private val p = ctx.getSharedPreferences("tvb", Context.MODE_PRIVATE)
+    private val isTv = (ctx.getSystemService(Context.UI_MODE_SERVICE) as? UiModeManager)
+        ?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
 
     private fun load(k: String): MutableList<Pair<String, String>> {
         val out = mutableListOf<Pair<String, String>>()
@@ -22,6 +26,29 @@ class Store(ctx: Context) {
         l.forEach { a.put(JSONObject().put("t", it.first).put("u", it.second)) }
         p.edit().putString(k, a.toString()).apply()
     }
+
+    private fun parse(json: String): List<Pair<String, String>> {
+        val out = mutableListOf<Pair<String, String>>()
+        try {
+            val a = JSONArray(json)
+            for (i in 0 until a.length()) {
+                val o = a.getJSONObject(i)
+                out.add(o.getString("t") to o.getString("u"))
+            }
+        } catch (e: Exception) {}
+        return out
+    }
+
+    private fun merge(k: String, json: String, cap: Int) {
+        val l = load(k)
+        for (e in parse(json)) if (l.none { it.second == e.second }) l.add(e)
+        save(k, l.take(cap))
+    }
+
+    fun bookmarksJson(): String = p.getString("b", "[]") ?: "[]"
+    fun historyJson(): String = p.getString("h", "[]") ?: "[]"
+    fun mergeBookmarks(json: String) = merge("b", json, 1000)
+    fun mergeHistory(json: String) = merge("h", json, 200)
 
     fun bookmarks() = load("b")
     fun history() = load("h")
@@ -76,6 +103,14 @@ class Store(ctx: Context) {
     var home: String
         get() = p.getString("home", "tvb:home") ?: "tvb:home"
         set(v) { p.edit().putString("home", v).apply() }
+
+    var syncId: String?
+        get() = p.getString("syncid", null)
+        set(v) { if (v == null) p.edit().remove("syncid").apply() else p.edit().putString("syncid", v).apply() }
+    /** Percent of the screen kept free on every side (TV overscan safe area). */
+    var overscan: Int
+        get() = gi("overscan", if (isTv) 5 else 0)
+        set(v) { si("overscan", v) }
 
     var updateUrl: String
         get() = p.getString("uurl", null) ?: BuildConfig.UPDATE_URL

@@ -65,8 +65,8 @@ object Ui {
             setTextColor(if (primary) ON_ACC else TEXT)
             stateListAnimator = null
             minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
-            setPadding(dp(ctx, 14f), 0, dp(ctx, 14f), 0)
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
+            setPadding(dp(ctx, 26f), 0, dp(ctx, 26f), 0)
             isFocusable = true
             if (onClick != null) setOnClickListener { onClick() }
         }
@@ -76,7 +76,7 @@ object Ui {
             setImageResource(res)
             contentDescription = desc
             scaleType = ImageView.ScaleType.CENTER_INSIDE
-            setPadding(dp(ctx, 11f), dp(ctx, 11f), dp(ctx, 11f), dp(ctx, 11f))
+            setPadding(dp(ctx, 13f), dp(ctx, 13f), dp(ctx, 13f), dp(ctx, 13f))
             imageTintList = ColorStateList.valueOf(if (primary) ON_ACC else TEXT)
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
             stateListAnimator = null
@@ -99,12 +99,12 @@ object Ui {
     fun card(ctx: Context) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         background = rect(ctx, SURF, 28f, LINE, 1f)
-        setPadding(dp(ctx, 28f), dp(ctx, 22f), dp(ctx, 28f), dp(ctx, 12f))
+        setPadding(dp(ctx, 34f), dp(ctx, 28f), dp(ctx, 34f), dp(ctx, 16f))
     }
 
     fun heading(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; setTextColor(TEXT); px(22f); typeface = Typeface.DEFAULT_BOLD
-        setPadding(0, 0, 0, dp(ctx, 6f))
+        setPadding(0, 0, 0, dp(ctx, 12f))
     }
 
     fun note(ctx: Context, t: String) = TextView(ctx).apply {
@@ -112,15 +112,22 @@ object Ui {
         setPadding(0, 0, 0, dp(ctx, 12f))
     }
 
-    fun row(ctx: Context, label: String, control: View): LinearLayout = LinearLayout(ctx).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        minimumHeight = dp(ctx, 72f)
-        addView(TextView(ctx).apply { text = label; setTextColor(TEXT); px(18f) },
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-        val lp = (control.layoutParams as? LinearLayout.LayoutParams)
-            ?: LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-        addView(control, lp)
+    fun row(ctx: Context, label: String, control: View): LinearLayout {
+        val inner = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(ctx, 84f)
+            addView(TextView(ctx).apply { text = label; setTextColor(TEXT); px(18f) },
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(ctx, 20f) })
+            val lp = (control.layoutParams as? LinearLayout.LayoutParams)
+                ?: LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            addView(control, lp)
+        }
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(View(ctx).apply { setBackgroundColor(LINE) }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1))
+            addView(inner, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
     }
 
     fun seek(ctx: Context, min: Int, max: Int, value: Int, onChange: (Int) -> Unit): SeekBar = SeekBar(ctx).apply {
@@ -141,7 +148,7 @@ object Ui {
         val box = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             background = rect(ctx, BG, 28f)
-            setPadding(dp(ctx, 5f), dp(ctx, 5f), dp(ctx, 5f), dp(ctx, 5f))
+            setPadding(dp(ctx, 6f), dp(ctx, 6f), dp(ctx, 6f), dp(ctx, 6f))
         }
         val btns = mutableListOf<Button>()
         fun paint(s: Int) {
@@ -153,7 +160,7 @@ object Ui {
         opts.forEachIndexed { i, t ->
             val b = button(ctx, t, false, 16f) { paint(i); onSel(i) }
             btns.add(b)
-            box.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 46f)).apply { marginStart = dp(ctx, 2f) })
+            box.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 52f)).apply { marginStart = dp(ctx, 3f) })
         }
         paint(sel)
         return box
