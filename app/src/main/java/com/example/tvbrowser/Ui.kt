@@ -66,7 +66,7 @@ object Ui {
             stateListAnimator = null
             minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
-            setPadding(dp(ctx, 26f), 0, dp(ctx, 26f), 0)
+            setPadding(dp(ctx, 40f), 0, dp(ctx, 40f), 0)
             isFocusable = true
             if (onClick != null) setOnClickListener { onClick() }
         }
@@ -159,6 +159,7 @@ object Ui {
         }
         opts.forEachIndexed { i, t ->
             val b = button(ctx, t, false, 16f) { paint(i); onSel(i) }
+            b.setPadding(dp(ctx, 32f), 0, dp(ctx, 32f), 0)
             btns.add(b)
             box.addView(b, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 52f)).apply { marginStart = dp(ctx, 3f) })
         }

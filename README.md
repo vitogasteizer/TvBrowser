@@ -22,8 +22,8 @@ A simple, modern web browser for **Google TV / Chromecast with Google TV, Androi
 - **Downloads and files:** download a file from a website and open it in the browser (HTML, images, video, audio, text).
 - **Sync:** every device has its own ID. Enter another device's ID to share bookmarks and history through Firebase (free tier is enough).
 - **In-app updates** from your own GitHub releases.
-- **TV friendly:** the layout scales to any resolution and keeps a safe margin from the screen edges (overscan).
-- **Languages:** English and Georgian, and it is easy to [add more](docs/TRANSLATING.md).
+- **TV friendly:** the layout scales to any resolution. The screen-edge margin (overscan) is adjustable in steps of 0.1% with white corner arcs as a guide.
+- **Languages:** English and Georgian, switchable in Settings, and it is easy to [add more](docs/TRANSLATING.md).
 
 ## Install
 

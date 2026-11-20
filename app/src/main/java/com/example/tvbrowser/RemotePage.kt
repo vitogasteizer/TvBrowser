@@ -41,6 +41,9 @@ header{display:flex;align-items:center;justify-content:space-between;height:40px
 body.m1 #pad{display:none}
 body.m1 #nav{display:grid}
 body.m1 #dw{display:flex}
+#tp{display:none;gap:10px}#tp.show{display:flex}
+#tp input{flex:1;min-width:0;height:54px;border-radius:27px;border:2px solid #6EA8FF;background:#171B22;color:#F2F4F8;padding:0 20px;font-size:17px;touch-action:auto;font-family:inherit}
+#tp button{width:54px;height:54px;border-radius:50%;background:#6EA8FF;color:#0B1220}
 .tx{display:flex;gap:10px}
 .tx input{flex:1;min-width:0;height:50px;border-radius:25px;border:1px solid #262C36;background:#171B22;color:#F2F4F8;padding:0 20px;font-size:16px;touch-action:auto;font-family:inherit}
 .tx button{height:50px;padding:0 20px;border-radius:25px;background:#6EA8FF;color:#0B1220;font-weight:700;font-size:15px}
@@ -59,6 +62,7 @@ body.m1 #dw{display:flex}
 <symbol id="full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
 <symbol id="mouse" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v4"/></symbol>
 <symbol id="dp" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
+<symbol id="go" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
 <symbol id="up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
 <symbol id="dn" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
 <symbol id="vm" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/></symbol>
@@ -67,6 +71,7 @@ body.m1 #dw{display:flex}
 </defs></svg>
 <header><div class="st"><span id="dot"></span><span id="stx">@@remote_connecting@@</span></div>
 <div class="seg"><button id="m0" class="on" aria-label="@@remote_mouse@@"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="@@remote_buttons@@"><svg class="i"><use href="#dp"/></svg></button></div></header>
+<div id="tp"><input id="tpi" placeholder="@@remote_type@@" autocomplete="off" autocapitalize="off"><button id="tpg" aria-label="@@remote_go@@"><svg class="i"><use href="#go"/></svg></button></div>
 <div id="pad"><div id="scr"><i></i></div></div>
 <div id="nav">
 <button data-a="fwd" aria-label="@@remote_forward@@"><svg class="i"><use href="#fwd"/></svg></button>
@@ -101,6 +106,7 @@ var K=new URLSearchParams(location.search).get('k'),ws=null,mode=0;
 function conn(){
  ws=new WebSocket('ws://'+location.host+'/ws?k='+K);
  ws.onopen=function(){g('dot').className='ok';g('stx').textContent='@@remote_connected@@';send('mode '+mode);};
+ ws.onmessage=function(e){if(e.data=='ti 1'){g('tp').className='show';g('tpi').focus();}else if(e.data=='ti 0'){g('tp').className='';}};
  ws.onclose=function(){g('dot').className='';g('stx').textContent='@@remote_connecting@@';setTimeout(conn,1000);};
 }
 function send(s){if(ws&&ws.readyState==1)ws.send(s);}
@@ -124,6 +130,9 @@ ti.addEventListener('keydown',function(e){
  if(e.key=='Enter'){sendText();send('e');e.preventDefault();}
  else if(e.key=='Backspace'&&!ti.value){send('b');}
 });
+function tpGo(){var v=g('tpi').value;if(v){send('t '+v);}send('e');g('tpi').value='';g('tp').className='';}
+g('tpg').onclick=tpGo;
+g('tpi').addEventListener('keydown',function(e){if(e.key=='Enter'){tpGo();e.preventDefault();}});
 conn();
 </script></body></html>"""
 

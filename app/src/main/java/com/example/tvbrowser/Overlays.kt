@@ -29,10 +29,14 @@ object SettingsUi {
         val openSync: () -> Unit,
         val clearHistory: () -> Unit,
         val clearCookies: () -> Unit,
-        val onUpdate: () -> Unit
+        val onUpdate: () -> Unit,
+        val onGuide: (Boolean) -> Unit,
+        val onLang: () -> Unit
     )
 
     fun build(ctx: Context, s: Store, a: Actions, close: () -> Unit): View {
+        val langCodes = ctx.resources.getStringArray(R.array.lang_codes).toList()
+        val langNames = ctx.resources.getStringArray(R.array.lang_names).toList()
         val mouse = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.mouse)))
             addView(Ui.row(ctx, ctx.getString(R.string.cursor_speed), Ui.seek(ctx, 1, 10, s.speed) { s.speed = it }))
@@ -44,9 +48,19 @@ object SettingsUi {
             addView(Ui.heading(ctx, ctx.getString(R.string.control)))
             addView(Ui.row(ctx, ctx.getString(R.string.mode), Ui.seg(ctx, listOf(ctx.getString(R.string.mouse), ctx.getString(R.string.buttons)), if (s.mouse) 0 else 1) { s.mouse = it == 0; a.onMode() }))
             addView(Ui.row(ctx, ctx.getString(R.string.scroll_speed), Ui.seek(ctx, 1, 10, s.scrollSpeed) { s.scrollSpeed = it }))
+            addView(Ui.row(ctx, ctx.getString(R.string.language), Ui.seg(ctx, langNames, langCodes.indexOf(s.lang).coerceAtLeast(0)) { s.lang = langCodes[it]; a.onLang() }))
         }
         val zooms = listOf(75, 100, 125, 150)
-        val margins = listOf(0, 3, 5, 8, 10)
+        val ovVal = TextView(ctx).apply { setTextColor(Ui.MUTED); px(16f); gravity = Gravity.END; minWidth = Ui.dp(ctx, 76f) }
+        fun ovText() { ovVal.text = String.format("%.1f%%", s.overscan10 / 10f) }
+        ovText()
+        val ovSeek = Ui.seek(ctx, 0, 100, s.overscan10) { s.overscan10 = it; ovText(); a.onPrefs(); a.onGuide(true) }
+        ovSeek.setOnFocusChangeListener { _, f -> if (f) a.onGuide(true) }
+        val ovBox = LinearLayout(ctx).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ovVal)
+            addView(ovSeek)
+        }
         val homeField = Ui.field(ctx, ctx.getString(R.string.home_hint), if (s.home == "tvb:home") "" else s.home).apply {
             layoutParams = LinearLayout.LayoutParams(Ui.dp(ctx, 320f), Ui.dp(ctx, 52f))
         }
@@ -55,7 +69,7 @@ object SettingsUi {
             addView(Ui.heading(ctx, ctx.getString(R.string.browser)))
             addView(Ui.row(ctx, ctx.getString(R.string.site_version), Ui.seg(ctx, MainActivity.UA_NAMES, s.ua) { s.ua = it; a.onUa() }))
             addView(Ui.row(ctx, ctx.getString(R.string.text_scale), Ui.seg(ctx, zooms.map { "$it%" }, zooms.indexOf(s.zoom).coerceAtLeast(1)) { s.zoom = zooms[it]; a.onPrefs() }))
-            addView(Ui.row(ctx, ctx.getString(R.string.overscan), Ui.seg(ctx, margins.map { "$it%" }, margins.indexOf(s.overscan).coerceAtLeast(0)) { s.overscan = margins[it]; a.onPrefs() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.overscan), ovBox))
             addView(Ui.row(ctx, ctx.getString(R.string.home_page), homeField))
             addView(Ui.row(ctx, ctx.getString(R.string.autohide), Ui.seg(ctx, listOf(ctx.getString(R.string.off), ctx.getString(R.string.on)), if (s.autohide) 1 else 0) { s.autohide = it == 1; a.onPrefs() }))
         }

@@ -39,6 +39,24 @@ class RemoteServer(
         return true
     }
 
+    /** Sends a short text message to every connected phone. */
+    fun broadcast(msg: String) {
+        val data = msg.toByteArray(Charsets.UTF_8)
+        if (data.size > 125) return
+        Thread {
+            for (c in clients) {
+                try {
+                    val o = c.getOutputStream()
+                    synchronized(o) {
+                        o.write(byteArrayOf(0x81.toByte(), data.size.toByte()))
+                        o.write(data)
+                        o.flush()
+                    }
+                } catch (_: Exception) {}
+            }
+        }.start()
+    }
+
     fun stop() {
         running = false
         try { server?.close() } catch (_: Exception) {}

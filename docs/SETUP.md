@@ -47,6 +47,8 @@ The workflow passes them to the build, so the **next** build contains them. Addi
 
 > The key is stored inside the APK and can be extracted from it. That is normal for Firebase. Real protection comes from the Firestore rules and the API restriction above.
 
+> **Error "The database (default) does not exist"?** The app tries both `(default)` and a database named `default`. If it still fails, check that a Firestore database exists in this exact project and that the project ID secret is correct.
+
 ## 4. Install on the TV
 
 1. **Developer options:**

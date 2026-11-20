@@ -107,10 +107,13 @@ class Store(ctx: Context) {
     var syncId: String?
         get() = p.getString("syncid", null)
         set(v) { if (v == null) p.edit().remove("syncid").apply() else p.edit().putString("syncid", v).apply() }
-    /** Percent of the screen kept free on every side (TV overscan safe area). */
-    var overscan: Int
-        get() = gi("overscan", if (isTv) 5 else 0)
-        set(v) { si("overscan", v) }
+    /** Safe margin on every side, in tenths of a percent of the screen (TV overscan). */
+    var overscan10: Int
+        get() = gi("overscan10", if (isTv) 20 else 0)
+        set(v) { si("overscan10", v) }
+    var lang: String
+        get() = p.getString("lang", "") ?: ""
+        set(v) { p.edit().putString("lang", v).apply() }
 
     var updateUrl: String
         get() = p.getString("uurl", null) ?: BuildConfig.UPDATE_URL

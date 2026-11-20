@@ -135,4 +135,9 @@
     <string name="remote_vol_up">Volume +</string>
     <string name="remote_type">Type text…</string>
     <string name="remote_send">Send</string>
+    <string name="go">Go</string>
+    <string name="remote_go">Go</string>
+    <string name="language">Language</string>
+    <string name="lang_auto">Automatic</string>
+    <string name="overscan_hint">Increase the margin until all four white corner arcs are fully visible</string>
 </resources>

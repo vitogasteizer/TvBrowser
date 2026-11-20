@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Languages offered in Settings. To add one: add its code and its native name here,
+     then create res/values-XX/strings.xml (see docs/TRANSLATING.md). -->
+<resources>
+    <string-array name="lang_codes">
+        <item></item>
+        <item>en</item>
+        <item>ka</item>
+    </string-array>
+    <string-array name="lang_names">
+        <item>@string/lang_auto</item>
+        <item>English</item>
+        <item>ქართული</item>
+    </string-array>
+</resources>

@@ -27,6 +27,17 @@ window.__tvbFull=function(){var v=best();if(!v)return;var p;
 })();
 """
 
+    const val FIELD = """
+(function(){
+if(window.__tvbF)return;window.__tvbF=1;
+function isField(e){if(!e)return false;var t=e.tagName;
+ if(t=='INPUT'){var y=(e.type||'text').toLowerCase();return ['checkbox','radio','button','submit','range','file','color','image','reset'].indexOf(y)<0;}
+ return t=='TEXTAREA'||!!e.isContentEditable;}
+document.addEventListener('focusin',function(e){if(isField(e.target)){try{TVB.field(true);}catch(x){}}},true);
+document.addEventListener('focusout',function(){setTimeout(function(){if(!isField(document.activeElement)){try{TVB.field(false);}catch(x){}}},60);},true);
+})();
+"""
+
     const val TOGGLE = """
 (function(){var v=document.fullscreenElement||document.webkitFullscreenElement;
 if(!v||v.tagName!='VIDEO')v=(window.__tvbP&&window.__tvbP.el)||document.querySelector('video');

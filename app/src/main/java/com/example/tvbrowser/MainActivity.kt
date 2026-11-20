@@ -4,6 +4,8 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.Dialog
+import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Bitmap
 import android.media.AudioManager
@@ -49,6 +51,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.URL
 import java.util.Collections
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.min
@@ -71,6 +74,8 @@ class MainActivity : Activity() {
     }
 
     private lateinit var screenFrame: FrameLayout
+    private lateinit var guide: OverscanGuide
+    private var webField = false
     private lateinit var root: FrameLayout
     private lateinit var content: FrameLayout
     private lateinit var toolbar: LinearLayout
@@ -104,6 +109,19 @@ class MainActivity : Activity() {
     private var dAy = 0f
 
     private val hidePrompt = Runnable { showPrompt(false) }
+    private val hideGuide = Runnable { guide.visibility = View.GONE }
+
+    private fun showGuide(show: Boolean) {
+        handler.removeCallbacks(hideGuide)
+        if (show) {
+            guide.inset = store.overscan10 / 10f
+            guide.visibility = View.VISIBLE
+            guide.invalidate()
+            handler.postDelayed(hideGuide, 3500)
+        } else {
+            guide.visibility = View.GONE
+        }
+    }
     private val hideBar = Runnable {
         if (!autoHide() || customView != null || overlay != null || dialog != null || urlBox.hasFocus()) return@Runnable
         if (mouseMode && curY <= tbBottom()) { scheduleHide(); return@Runnable }
@@ -115,6 +133,16 @@ class MainActivity : Activity() {
     private fun dp(x: Float) = Ui.dp(this, x)
     private fun toast(m: String) = Toast.makeText(this, m, Toast.LENGTH_SHORT).show()
     private fun tbBottom() = dp(104f).toFloat()
+
+    override fun attachBaseContext(base: Context) {
+        val lang = base.getSharedPreferences("tvb", MODE_PRIVATE).getString("lang", "") ?: ""
+        if (lang.isEmpty()) { super.attachBaseContext(base); return }
+        val loc = Locale(lang)
+        Locale.setDefault(loc)
+        val cfg = Configuration(base.resources.configuration)
+        cfg.setLocale(loc)
+        super.attachBaseContext(base.createConfigurationContext(cfg))
+    }
 
     // ------------------------------------------------------------ UI
     @SuppressLint("SetJavaScriptEnabled")
@@ -162,6 +190,7 @@ class MainActivity : Activity() {
         add(Ui.icon(this, R.drawable.ic_reload, getString(R.string.reload)) { web.reload(); web.requestFocus() })
         add(Ui.icon(this, R.drawable.ic_home, getString(R.string.home)) { open(HOME); web.requestFocus() })
         toolbar.addView(urlBox, LinearLayout.LayoutParams(0, dp(52f), 1f).apply { marginStart = dp(3f); marginEnd = dp(3f) })
+        add(Ui.icon(this, R.drawable.ic_go, getString(R.string.go), true) { go(urlBox.text.toString()) })
         add(Ui.icon(this, R.drawable.ic_bookmark, getString(R.string.bookmarks)) { showBookmarks() })
         add(Ui.icon(this, R.drawable.ic_history, getString(R.string.history)) { showHistory() })
         add(Ui.icon(this, R.drawable.ic_folder, getString(R.string.files)) { showFiles() })
@@ -193,8 +222,14 @@ class MainActivity : Activity() {
         screenFrame = FrameLayout(this).apply {
             setBackgroundColor(Ui.BG)
             addView(root, FrameLayout.LayoutParams(-1, -1))
+            guide = OverscanGuide(this@MainActivity)
+            guide.visibility = View.GONE
+            addView(guide, FrameLayout.LayoutParams(-1, -1))
         }
         setContentView(screenFrame)
+        screenFrame.viewTreeObserver.addOnGlobalFocusChangeListener { _, nf ->
+            if (nf is EditText) server?.broadcast("ti 1") else if (!webField) server?.broadcast("ti 0")
+        }
 
         setupWeb()
         applyUa(false)
@@ -211,6 +246,7 @@ class MainActivity : Activity() {
     // ------------------------------------------------------------ web
     inner class Bridge {
         @JavascriptInterface fun video(f: Boolean) { runOnUiThread { showPrompt(f) } }
+        @JavascriptInterface fun field(f: Boolean) { runOnUiThread { webField = f; server?.broadcast(if (f) "ti 1" else "ti 0") } }
         @JavascriptInterface fun pseudo(f: Boolean) { runOnUiThread { pseudoFull = f; if (f) showPrompt(false) } }
     }
 
@@ -244,6 +280,7 @@ class MainActivity : Activity() {
                 showPrompt(false)
             }
             override fun onPageFinished(v: WebView, url: String) {
+                v.evaluateJavascript(Js.FIELD, null)
                 if (url.startsWith(START_BASE)) {
                     startShown = true
                     if (!urlBox.hasFocus()) urlBox.setText("")
@@ -348,8 +385,8 @@ input:focus{outline:.25vw solid #6EA8FF}
         cursor.style(store.cursorSize, CURSOR_COLORS[store.cursorColor.coerceIn(0, CURSOR_COLORS.size - 1)])
         web.settings.textZoom = store.zoom
         val dm = resources.displayMetrics
-        val ox = (dm.widthPixels * store.overscan / 100f).toInt()
-        val oy = (dm.heightPixels * store.overscan / 100f).toInt()
+        val ox = (dm.widthPixels * store.overscan10 / 1000f).toInt()
+        val oy = (dm.heightPixels * store.overscan10 / 1000f).toInt()
         root.setPadding(ox, oy, ox, oy)
         val lp = content.layoutParams as FrameLayout.LayoutParams
         lp.topMargin = if (autoHide()) 0 else tbBottom().toInt()
@@ -769,6 +806,7 @@ input:focus{outline:.25vw solid #6EA8FF}
         overlay?.let { root.removeView(it) }
         overlay = null
         overlayScroll = null
+        showGuide(false)
         connectStatus = null
         blockFocus(false)
         applyMode()
@@ -788,7 +826,9 @@ input:focus{outline:.25vw solid #6EA8FF}
             openSync = { showSync() },
             clearHistory = { store.clearHistory(); toast(getString(R.string.history_cleared)) },
             clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast(getString(R.string.cookies_cleared)) },
-            onUpdate = { checkUpdate() }
+            onUpdate = { checkUpdate() },
+            onGuide = { showGuide(it) },
+            onLang = { recreate() }
         )
         showOverlay(SettingsUi.build(this, store, a) { closeOverlay() })
     }

@@ -135,4 +135,9 @@
     <string name="remote_vol_up">ხმა +</string>
     <string name="remote_type">ტექსტის აკრეფა…</string>
     <string name="remote_send">გაგზავნა</string>
+    <string name="go">გადასვლა</string>
+    <string name="remote_go">გადასვლა</string>
+    <string name="language">ენა</string>
+    <string name="lang_auto">ავტომატური</string>
+    <string name="overscan_hint">გაზარდეთ დაშორება, სანამ ოთხივე თეთრი რკალი სრულად გამოჩნდება</string>
 </resources>
