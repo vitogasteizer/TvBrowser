@@ -64,7 +64,9 @@ object Ui {
             px(sp)
             setTextColor(if (primary) ON_ACC else TEXT)
             stateListAnimator = null
-            minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
+            minWidth = 0; minimumWidth = 0
+            minHeight = dp(ctx, 52f); minimumHeight = dp(ctx, 52f)
+            gravity = Gravity.CENTER
             background = btnBg(ctx, if (primary) ACC else SURF2, 26f)
             setPadding(dp(ctx, 40f), 0, dp(ctx, 40f), 0)
             isFocusable = true

@@ -603,13 +603,32 @@ input:focus{outline:.25vw solid #6EA8FF}
         touchAt((curX - (content.left - cursor.left)), (curY - (content.top - cursor.top)))
     }
 
+    private fun focusDir(code: Int): Int? = when (code) {
+        KeyEvent.KEYCODE_DPAD_UP -> View.FOCUS_UP
+        KeyEvent.KEYCODE_DPAD_DOWN -> View.FOCUS_DOWN
+        KeyEvent.KEYCODE_DPAD_LEFT -> View.FOCUS_LEFT
+        KeyEvent.KEYCODE_DPAD_RIGHT -> View.FOCUS_RIGHT
+        else -> null
+    }
+
+    /** Sends a key as if it came from the TV remote. Arrow keys also move the focus, which the system
+     *  normally does only for real key presses. */
     private fun pressKey(code: Int) {
         val t = SystemClock.uptimeMillis()
         val down = KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0)
         val up = KeyEvent(t, t, KeyEvent.ACTION_UP, code, 0)
-        val d = dialog
-        if (d != null) { d.dispatchKeyEvent(down); d.dispatchKeyEvent(up) }
-        else { dispatchKeyEvent(down); dispatchKeyEvent(up) }
+        val handled = dispatchKeyEvent(down)
+        dispatchKeyEvent(up)
+        val dir = focusDir(code)
+        if (!handled && dir != null) {
+            val f = currentFocus
+            if (f != null) {
+                val n = f.focusSearch(dir)
+                if (n != null) n.requestFocus(dir)
+            } else {
+                (overlay ?: web).requestFocus()
+            }
+        }
     }
 
     override fun dispatchKeyEvent(e: KeyEvent): Boolean {
@@ -876,12 +895,28 @@ input:focus{outline:.25vw solid #6EA8FF}
     private fun volume(a: String) {
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
         try {
+            if (am.isVolumeFixed) { toast(getString(R.string.volume_fixed)); return }
+            val st = AudioManager.STREAM_MUSIC
+            val before = am.getStreamVolume(st)
             when (a) {
-                "up" -> am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
-                "dn" -> am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
+                "up" -> am.adjustStreamVolume(st, AudioManager.ADJUST_RAISE, AudioManager.FLAG_SHOW_UI)
+                "dn" -> am.adjustStreamVolume(st, AudioManager.ADJUST_LOWER, AudioManager.FLAG_SHOW_UI)
                 else -> if (Build.VERSION.SDK_INT >= 23) {
-                    am.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI)
+                    am.adjustStreamVolume(st, AudioManager.ADJUST_TOGGLE_MUTE, AudioManager.FLAG_SHOW_UI)
                 }
+            }
+            if (a == "mute") return
+            val atLimit = (a == "up" && before >= am.getStreamMaxVolume(st)) || (a == "dn" && before <= 0)
+            if (!atLimit && am.getStreamVolume(st) == before) {
+                // some devices (e.g. Fire TV) ignore stream changes: try the media volume key instead
+                val key = if (a == "up") KeyEvent.KEYCODE_VOLUME_UP else KeyEvent.KEYCODE_VOLUME_DOWN
+                try {
+                    am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, key))
+                    am.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, key))
+                } catch (_: Exception) {}
+                handler.postDelayed({
+                    if (am.getStreamVolume(st) == before) toast(getString(R.string.volume_fixed))
+                }, 400)
             }
         } catch (_: Exception) {}
     }

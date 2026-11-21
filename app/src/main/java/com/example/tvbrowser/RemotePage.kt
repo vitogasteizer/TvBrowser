@@ -25,7 +25,7 @@ header{display:flex;align-items:center;justify-content:space-between;height:40px
 #nav{display:none;grid-template-columns:repeat(4,1fr);gap:10px}
 #nav button{height:52px;border-radius:26px}
 #dw{display:none;flex:1;align-items:center;justify-content:center;min-height:0}
-#dpad{height:100%;max-width:100%;aspect-ratio:1/1;border-radius:50%;background:#171B22;border:1px solid #262C36;position:relative}
+#dpad{width:260px;height:260px;border-radius:50%;background:#171B22;border:1px solid #262C36;position:relative}
 #dpad button{position:absolute;background:transparent;width:22%;height:22%;border-radius:50%}
 #dpad .u{top:5%;left:39%}#dpad .dn{bottom:5%;left:39%}#dpad .l{left:5%;top:39%}#dpad .r{right:5%;top:39%}
 #dpad .ok{left:50%;top:50%;width:40%;height:40%;transform:translate(-50%,-50%);background:#6EA8FF;color:#0B1220;font-weight:700;font-size:18px}
@@ -94,10 +94,9 @@ body.m1 #dw{display:flex}
 <div class="r1">
 <button data-k="back" aria-label="@@remote_back@@"><svg class="i"><use href="#back"/></svg></button>
 <button class="home" data-a="home" aria-label="@@remote_home@@"><svg class="i"><use href="#home"/></svg></button>
-<button class="acc" data-k="full" aria-label="@@remote_fullscreen@@"><svg class="i"><use href="#full"/></svg></button>
+<button data-v="mute" aria-label="@@remote_mute@@"><svg class="i"><use href="#vm"/></svg></button>
 </div>
 <div class="r2">
-<button class="mute" data-v="mute" aria-label="@@remote_mute@@"><svg class="i"><use href="#vm"/></svg></button>
 <div class="vol"><button data-v="dn" aria-label="@@remote_vol_down@@"><svg class="i"><use href="#vd"/></svg></button><button data-v="up" aria-label="@@remote_vol_up@@"><svg class="i"><use href="#vu"/></svg></button></div>
 </div>
 
@@ -107,11 +106,13 @@ var K=new URLSearchParams(location.search).get('k'),ws=null,mode=0;
 function conn(){
  ws=new WebSocket('ws://'+location.host+'/ws?k='+K);
  ws.onopen=function(){g('dot').className='ok';g('stx').textContent='@@remote_connected@@';send('mode '+mode);};
- ws.onmessage=function(e){if(e.data=='ti 1'){g('tp').className='show';g('tpi').focus();}else if(e.data=='ti 0'){g('tp').className='';}};
+ ws.onmessage=function(e){if(e.data=='ti 1'){g('tp').className='show';g('tpi').focus();setTimeout(fit,30);}else if(e.data=='ti 0'){g('tp').className='';setTimeout(fit,30);}};
  ws.onclose=function(){g('dot').className='';g('stx').textContent='@@remote_connecting@@';setTimeout(conn,1000);};
 }
 function send(s){if(ws&&ws.readyState==1)ws.send(s);}
-function setMode(m){mode=m;g('m0').className=m==0?'on':'';g('m1').className=m==1?'on':'';
+function fit(){var w=g('dw'),d=g('dpad'),s=Math.min(w.clientWidth,w.clientHeight);if(s>0){d.style.width=s+'px';d.style.height=s+'px';}}
+window.addEventListener('resize',fit);
+function setMode(m){mode=m;setTimeout(fit,30);g('m0').className=m==0?'on':'';g('m1').className=m==1?'on':'';
  document.body.className=m==1?'m1':'';send('mode '+m);}
 g('m0').onclick=function(){setMode(0)};g('m1').onclick=function(){setMode(1)};
 var pad=g('pad'),lx=0,ly=0,sx=0,sy=0,t0=0,moved=0,ax=0,ay=0,tm=null;
