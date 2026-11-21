@@ -47,6 +47,8 @@ class Store(ctx: Context) {
 
     fun bookmarksJson(): String = p.getString("b", "[]") ?: "[]"
     fun historyJson(): String = p.getString("h", "[]") ?: "[]"
+    fun replaceBookmarks(json: String) = save("b", parse(json))
+    fun replaceHistory(json: String) = save("h", parse(json).take(200))
     fun mergeBookmarks(json: String) = merge("b", json, 1000)
     fun mergeHistory(json: String) = merge("h", json, 200)
 

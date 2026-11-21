@@ -140,4 +140,10 @@
     <string name="language">Language</string>
     <string name="lang_auto">Automatic</string>
     <string name="overscan_hint">Increase the margin until all four white corner arcs are fully visible</string>
+    <string name="sync_merge">Sync and merge</string>
+    <string name="sync_replace">Sync and replace existing</string>
+    <string name="replace_done">Replaced with the cloud data. Bookmarks: %1$d, history: %2$d</string>
+    <string name="sync_hint">Connected. Now press a Sync button to bring the data over.</string>
+    <string name="sync_howto">How syncing works</string>
+    <string name="sync_help">1) On the first device press “Sync and merge” to upload its data.\n2) On the other device enter the first device\'s ID and press Connect.\n3) Press “Sync and merge” to combine both devices, or “Sync and replace existing” to delete what this device has and take the cloud data.\nConnecting alone does not copy anything.</string>
 </resources>

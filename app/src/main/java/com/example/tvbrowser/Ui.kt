@@ -212,7 +212,7 @@ object Ui {
             setPadding(dp(ctx, 48f), dp(ctx, 32f), dp(ctx, 48f), dp(ctx, 24f))
         }
         val head = LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL }
-        head.addView(button(ctx, "◀", false, 20f) { onBack() }, LinearLayout.LayoutParams(dp(ctx, 60f), dp(ctx, 60f)))
+        head.addView(icon(ctx, R.drawable.ic_back, ctx.getString(R.string.back)) { onBack() }, LinearLayout.LayoutParams(dp(ctx, 60f), dp(ctx, 60f)))
         head.addView(TextView(ctx).apply {
             text = title; px(30f); typeface = Typeface.DEFAULT_BOLD; setTextColor(TEXT)
             setPadding(dp(ctx, 20f), 0, 0, 0)

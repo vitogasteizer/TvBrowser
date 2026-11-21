@@ -3,6 +3,8 @@ package com.example.tvbrowser
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
@@ -97,17 +99,27 @@ object SyncUi {
     private fun toast(ctx: Context, m: String) = Toast.makeText(ctx, m, Toast.LENGTH_SHORT).show()
     private val ID_RE = Regex("^usr_[a-z0-9]{6,}$")
 
-    private fun work(ctx: Context, s: Store, push: Boolean, done: () -> Unit) {
+    /** replace = this device takes the cloud data; otherwise both sides are merged. */
+    private fun work(ctx: Context, s: Store, replace: Boolean, done: () -> Unit) {
         if (!Cloud.configured()) { toast(ctx, ctx.getString(R.string.no_firebase)); return }
         val id = s.syncId ?: s.deviceId
         toast(ctx, ctx.getString(R.string.working))
         Thread {
             val msg = try {
                 val remote = Cloud.get(id)
-                if (remote != null) { s.mergeBookmarks(remote.bookmarks); s.mergeHistory(remote.history) }
-                if (push) Cloud.put(id, Cloud.Data(s.bookmarksJson(), s.historyJson()))
-                if (remote == null && !push) ctx.getString(R.string.nothing_in_cloud)
-                else ctx.getString(if (push) R.string.sync_done else R.string.download_done, s.bookmarks().size, s.history().size)
+                if (replace) {
+                    if (remote == null) {
+                        ctx.getString(R.string.nothing_in_cloud)
+                    } else {
+                        s.replaceBookmarks(remote.bookmarks)
+                        s.replaceHistory(remote.history)
+                        ctx.getString(R.string.replace_done, s.bookmarks().size, s.history().size)
+                    }
+                } else {
+                    if (remote != null) { s.mergeBookmarks(remote.bookmarks); s.mergeHistory(remote.history) }
+                    Cloud.put(id, Cloud.Data(s.bookmarksJson(), s.historyJson()))
+                    ctx.getString(R.string.sync_done, s.bookmarks().size, s.history().size)
+                }
             } catch (e: Exception) {
                 ctx.getString(R.string.sync_failed, e.message ?: "")
             }
@@ -131,6 +143,26 @@ object SyncUi {
         }
         val status = TextView(ctx).apply { setTextColor(Ui.MUTED); px(16f) }
         val counts = TextView(ctx).apply { setTextColor(Ui.MUTED); px(16f) }
+        val hint = TextView(ctx).apply { setTextColor(Ui.ACC); px(16f); visibility = View.GONE }
+        val btnMerge = Ui.button(ctx, ctx.getString(R.string.sync_merge), true, 18f)
+        val btnReplace = Ui.button(ctx, ctx.getString(R.string.sync_replace), false, 18f)
+        val blinkers = mutableListOf<ObjectAnimator>()
+        fun blink(on: Boolean) {
+            blinkers.forEach { it.cancel() }
+            blinkers.clear()
+            btnMerge.alpha = 1f
+            btnReplace.alpha = 1f
+            hint.visibility = if (on) View.VISIBLE else View.GONE
+            if (on) for (v in listOf<View>(btnMerge, btnReplace)) {
+                val a = ObjectAnimator.ofFloat(v, "alpha", 1f, 0.3f)
+                a.duration = 650
+                a.repeatMode = ValueAnimator.REVERSE
+                a.repeatCount = ValueAnimator.INFINITE
+                a.start()
+                blinkers.add(a)
+            }
+        }
+        hint.text = ctx.getString(R.string.sync_hint)
         fun refresh() {
             idView.text = if (hidden) "usr_••••••••••••••" else s.deviceId
             qrImg.setImageBitmap(ConnectUi.qr(s.deviceId, Ui.dp(ctx, 170f)))
@@ -140,6 +172,8 @@ object SyncUi {
             counts.text = ctx.getString(R.string.counts, s.bookmarks().size, s.history().size)
         }
         refresh()
+        btnMerge.setOnClickListener { work(ctx, s, false) { blink(false); refresh() } }
+        btnReplace.setOnClickListener { work(ctx, s, true) { blink(false); refresh() } }
         val wrapLp = { LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT) }
         val idRow = LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -161,15 +195,22 @@ object SyncUi {
             addView(Ui.note(ctx, ctx.getString(R.string.connect_other_hint)))
             addView(other, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, Ui.dp(ctx, 52f)))
             addView(status, wrapLp().apply { topMargin = Ui.dp(ctx, 12f) })
+            addView(hint, wrapLp().apply { topMargin = Ui.dp(ctx, 6f) })
             addView(LinearLayout(ctx).apply {
                 addView(Ui.button(ctx, ctx.getString(R.string.connect), true, 16f) {
                     val id = other.text.toString().trim().lowercase()
-                    if (!ID_RE.matches(id)) toast(ctx, ctx.getString(R.string.invalid_id))
-                    else { s.syncId = if (id == s.deviceId) null else id; refresh(); toast(ctx, ctx.getString(R.string.connected)) }
+                    if (!ID_RE.matches(id)) {
+                        toast(ctx, ctx.getString(R.string.invalid_id))
+                    } else {
+                        s.syncId = if (id == s.deviceId) null else id
+                        refresh()
+                        toast(ctx, ctx.getString(R.string.connected))
+                        blink(s.syncId != null)
+                    }
                 }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)))
-                addView(Ui.button(ctx, ctx.getString(R.string.use_own_id), false, 16f) { s.syncId = null; refresh() },
+                addView(Ui.button(ctx, ctx.getString(R.string.use_own_id), false, 16f) { s.syncId = null; blink(false); refresh() },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
-                addView(Ui.button(ctx, ctx.getString(R.string.new_id), false, 16f) { s.syncId = null; s.newDeviceId(); refresh(); toast(ctx, ctx.getString(R.string.new_id_created)) },
+                addView(Ui.button(ctx, ctx.getString(R.string.new_id), false, 16f) { s.syncId = null; s.newDeviceId(); blink(false); refresh(); toast(ctx, ctx.getString(R.string.new_id_created)) },
                     LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 52f)).apply { marginStart = Ui.dp(ctx, 10f) })
             }, wrapLp().apply { topMargin = Ui.dp(ctx, 14f); bottomMargin = Ui.dp(ctx, 10f) })
         }
@@ -177,18 +218,18 @@ object SyncUi {
         val data = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.data)))
             addView(counts, wrapLp().apply { bottomMargin = Ui.dp(ctx, 14f) })
-            addView(LinearLayout(ctx).apply {
-                addView(Ui.button(ctx, ctx.getString(R.string.sync), true, 18f) { work(ctx, s, true) { refresh() } },
-                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)))
-                addView(Ui.button(ctx, ctx.getString(R.string.download), false, 18f) { work(ctx, s, false) { refresh() } },
-                    LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)).apply { marginStart = Ui.dp(ctx, 10f) })
-            }, wrapLp().apply { bottomMargin = Ui.dp(ctx, 10f) })
+            addView(btnMerge, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)))
+            addView(btnReplace, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)).apply { topMargin = Ui.dp(ctx, 12f); bottomMargin = Ui.dp(ctx, 10f) })
         }
         val safety = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.security)))
             addView(Ui.note(ctx, ctx.getString(R.string.security_note)))
         }
-        return Ui.screen(ctx, ctx.getString(R.string.sync), close, Ui.twoCols(ctx, listOf(idCard, connect), listOf(data, safety)))
+        val howto = Ui.card(ctx).apply {
+            addView(Ui.heading(ctx, ctx.getString(R.string.sync_howto)))
+            addView(Ui.note(ctx, ctx.getString(R.string.sync_help)))
+        }
+        return Ui.screen(ctx, ctx.getString(R.string.sync), close, Ui.twoCols(ctx, listOf(idCard, connect), listOf(data, safety, howto)))
     }
 }
 

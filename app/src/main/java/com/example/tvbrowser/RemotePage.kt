@@ -19,8 +19,9 @@ header{display:flex;align-items:center;justify-content:space-between;height:40px
 .seg .on{background:#6EA8FF;color:#0B1220}
 #pad{flex:1;position:relative;border-radius:36px;background:#171B22;border:1px solid #262C36;min-height:0}
 #pad:after{content:'';position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px;border-radius:50%;background:#222833;pointer-events:none}
-#scr{position:absolute;left:0;top:0;bottom:0;width:44px;display:flex;align-items:center}
-#scr i{display:block;width:5px;height:96px;margin-left:10px;border-radius:3px;background:#3A4352}
+#scr{position:absolute;right:10px;top:16px;bottom:16px;width:46px;border-radius:23px;background:#222833;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 0;color:#9AA4B2}
+#scr i{display:block;flex:1;width:4px;margin:8px 0;border-radius:2px;background:#3A4352}
+#scr .i{width:22px;height:22px}
 #nav{display:none;grid-template-columns:repeat(4,1fr);gap:10px}
 #nav button{height:52px;border-radius:26px}
 #dw{display:none;flex:1;align-items:center;justify-content:center;min-height:0}
@@ -72,7 +73,7 @@ body.m1 #dw{display:flex}
 <header><div class="st"><span id="dot"></span><span id="stx">@@remote_connecting@@</span></div>
 <div class="seg"><button id="m0" class="on" aria-label="@@remote_mouse@@"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="@@remote_buttons@@"><svg class="i"><use href="#dp"/></svg></button></div></header>
 <div id="tp"><input id="tpi" placeholder="@@remote_type@@" autocomplete="off" autocapitalize="off"><button id="tpg" aria-label="@@remote_go@@"><svg class="i"><use href="#go"/></svg></button></div>
-<div id="pad"><div id="scr"><i></i></div></div>
+<div id="pad"><div id="scr"><svg class="i"><use href="#up"/></svg><i></i><svg class="i"><use href="#dn"/></svg></div></div>
 <div id="nav">
 <button data-a="fwd" aria-label="@@remote_forward@@"><svg class="i"><use href="#fwd"/></svg></button>
 <button data-a="reload" aria-label="@@remote_reload@@"><svg class="i"><use href="#reload"/></svg></button>
@@ -99,7 +100,7 @@ body.m1 #dw{display:flex}
 <button class="mute" data-v="mute" aria-label="@@remote_mute@@"><svg class="i"><use href="#vm"/></svg></button>
 <div class="vol"><button data-v="dn" aria-label="@@remote_vol_down@@"><svg class="i"><use href="#vd"/></svg></button><button data-v="up" aria-label="@@remote_vol_up@@"><svg class="i"><use href="#vu"/></svg></button></div>
 </div>
-<div class="tx"><input id="t" placeholder="@@remote_type@@" autocomplete="off" autocapitalize="off"><button id="send">@@remote_send@@</button></div>
+
 <script>
 var g=function(i){return document.getElementById(i)};
 var K=new URLSearchParams(location.search).get('k'),ws=null,mode=0;
@@ -123,13 +124,6 @@ sc.addEventListener('touchstart',function(e){sy0=e.touches[0].clientY;e.preventD
 sc.addEventListener('touchmove',function(e){var y=e.touches[0].clientY;send('s '+Math.round(sy0-y));sy0=y;e.preventDefault();},{passive:false});
 function bind(sel,attr,cmd){document.querySelectorAll(sel).forEach(function(b){b.onclick=function(){send(cmd+' '+b.getAttribute(attr));};});}
 bind('[data-k]','data-k','k');bind('[data-a]','data-a','a');bind('[data-d]','data-d','d');bind('[data-v]','data-v','v');
-var ti=g('t');
-function sendText(){if(ti.value){send('t '+ti.value);ti.value='';}}
-g('send').onclick=sendText;
-ti.addEventListener('keydown',function(e){
- if(e.key=='Enter'){sendText();send('e');e.preventDefault();}
- else if(e.key=='Backspace'&&!ti.value){send('b');}
-});
 function tpGo(){var v=g('tpi').value;if(v){send('t '+v);}send('e');g('tpi').value='';g('tp').className='';}
 g('tpg').onclick=tpGo;
 g('tpi').addEventListener('keydown',function(e){if(e.key=='Enter'){tpGo();e.preventDefault();}});

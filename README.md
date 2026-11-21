@@ -45,7 +45,7 @@ On your phone: press the **phone** icon in the toolbar, scan the QR code (same W
 
 ## Sync
 
-Open **Settings → Sync**. Your ID is shown with a QR code. On another device enter that ID under *Connect another device*, then press **Sync**. Setup of Firebase is described in [docs/SETUP.md](docs/SETUP.md).
+Open **Settings → Sync**. Your ID is shown with a QR code. On another device enter that ID under *Connect another device* and press **Connect**. Connecting alone copies nothing: then press **Sync and merge** (combine both devices) or **Sync and replace existing** (this device takes the cloud data). Setup of Firebase is described in [docs/SETUP.md](docs/SETUP.md).
 
 > The ID works like a password. Anyone who has it can read the bookmarks and history stored under it.
 

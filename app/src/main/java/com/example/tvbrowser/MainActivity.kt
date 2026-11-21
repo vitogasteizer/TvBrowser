@@ -194,7 +194,7 @@ class MainActivity : Activity() {
         add(Ui.icon(this, R.drawable.ic_bookmark, getString(R.string.bookmarks)) { showBookmarks() })
         add(Ui.icon(this, R.drawable.ic_history, getString(R.string.history)) { showHistory() })
         add(Ui.icon(this, R.drawable.ic_folder, getString(R.string.files)) { showFiles() })
-        add(Ui.icon(this, R.drawable.ic_phone, getString(R.string.phone)) { showConnect() })
+        add(Ui.icon(this, R.drawable.ic_qr, getString(R.string.phone)) { showConnect() })
         add(uaBtn)
         add(modeBtn)
         add(Ui.icon(this, R.drawable.ic_settings, getString(R.string.settings)) { showSettings() })
