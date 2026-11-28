@@ -147,4 +147,27 @@
     <string name="sync_howto">როგორ მუშაობს სინქრონიზაცია</string>
     <string name="sync_help">1) პირველ მოწყობილობაზე დააჭირეთ „სინქრონიზაცია და შერწყმა“, რომ მონაცემები აიტვირთოს.\n2) მეორე მოწყობილობაზე შეიყვანეთ პირველის ID და დააჭირეთ „დაკავშირება“.\n3) დააჭირეთ „სინქრონიზაცია და შერწყმა“ ორივე მოწყობილობის გასაერთიანებლად, ან „სინქრონიზაცია და არსებულის წაშლა“, რომ ამ მოწყობილობის მონაცემები წაიშალოს და ღრუბლის მონაცემები ჩაჯდეს.\nმხოლოდ დაკავშირება არაფერს აკოპირებს.</string>
     <string name="volume_fixed">ეს მოწყობილობა ტელევიზორის ხმას ვერ ცვლის. გამოიყენეთ ტელევიზორის პულტი.</string>
+    <string name="block_title">დაბლოკვა</string>
+    <string name="block_level">რეკლამები და ამომხტარი ფანჯრები</string>
+    <string name="block_popups">ფანჯრები</string>
+    <string name="block_all">რეკლამა + ფანჯრები</string>
+    <string name="block_site">ამ საიტზე</string>
+    <string name="block_paused">შეჩერებული</string>
+    <string name="filters">ფილტრების სია</string>
+    <string name="filters_count">%d დომენი</string>
+    <string name="blocked_count">დაბლოკილია ამ სესიაში</string>
+    <string name="filters_updated">ფილტრები განახლდა: %d დომენი</string>
+    <string name="filters_failed">ფილტრების განახლება ვერ მოხერხდა</string>
+    <string name="continue_watching">გააგრძელე ყურება</string>
+    <string name="resume_from">გავაგრძელოთ %s-დან?</string>
+    <string name="resume_btn">გაგრძელება</string>
+    <string name="from_start">თავიდან</string>
+    <string name="watch_cleared">ყურების სია გასუფთავდა</string>
+    <string name="sync_settings">პარამეტრებიც</string>
+    <string name="sync_what">სინქრონიზდება: სანიშნეები, ისტორია, ყურების სია და პარამეტრები. არ სინქრონიზდება: cookie-ები და შესვლები, ეკრანის კიდეების დაშორება.</string>
+    <string name="remote_media">მედია</string>
+    <string name="remote_seek">გადახვევა</string>
+    <string name="remote_play">დაკვრა / პაუზა</string>
+    <string name="remote_slower">ნელა</string>
+    <string name="remote_faster">სწრაფად</string>
 </resources>

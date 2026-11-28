@@ -11,7 +11,7 @@ import java.net.URL
  * The database may be called "(default)" or, if it was created by hand, "default"; both are tried.
  */
 object Cloud {
-    class Data(val bookmarks: String, val history: String)
+    class Data(val bookmarks: String, val history: String, val settings: String = "{}", val watch: String = "[]")
 
     private val DBS = listOf("(default)", "default")
     @Volatile private var good: String? = null
@@ -47,7 +47,9 @@ object Cloud {
                     val f = JSONObject(c.inputStream.bufferedReader().readText()).optJSONObject("fields") ?: return Data("[]", "[]")
                     return Data(
                         f.optJSONObject("bookmarks")?.optString("stringValue", "[]") ?: "[]",
-                        f.optJSONObject("history")?.optString("stringValue", "[]") ?: "[]"
+                        f.optJSONObject("history")?.optString("stringValue", "[]") ?: "[]",
+                        f.optJSONObject("settings")?.optString("stringValue", "{}") ?: "{}",
+                        f.optJSONObject("watch")?.optString("stringValue", "[]") ?: "[]"
                     )
                 }
                 val body = errBody(c)
@@ -71,10 +73,12 @@ object Cloud {
                 val fields = JSONObject()
                     .put("bookmarks", JSONObject().put("stringValue", d.bookmarks))
                     .put("history", JSONObject().put("stringValue", d.history))
+                    .put("settings", JSONObject().put("stringValue", d.settings))
+                    .put("watch", JSONObject().put("stringValue", d.watch))
                     .put("updatedAt", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
                 val write = JSONObject()
                     .put("update", JSONObject().put("name", "${docs(db)}/tvbrowser/$id").put("fields", fields))
-                    .put("updateMask", JSONObject().put("fieldPaths", JSONArray(listOf("bookmarks", "history", "updatedAt"))))
+                    .put("updateMask", JSONObject().put("fieldPaths", JSONArray(listOf("bookmarks", "history", "settings", "watch", "updatedAt"))))
                 val body = JSONObject().put("writes", JSONArray().put(write)).toString()
                 c.outputStream.use { it.write(body.toByteArray()) }
                 val code = c.responseCode

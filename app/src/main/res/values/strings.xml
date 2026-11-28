@@ -147,4 +147,27 @@
     <string name="sync_howto">How syncing works</string>
     <string name="sync_help">1) On the first device press “Sync and merge” to upload its data.\n2) On the other device enter the first device\'s ID and press Connect.\n3) Press “Sync and merge” to combine both devices, or “Sync and replace existing” to delete what this device has and take the cloud data.\nConnecting alone does not copy anything.</string>
     <string name="volume_fixed">This device cannot change the TV volume. Use the TV remote.</string>
+    <string name="block_title">Blocking</string>
+    <string name="block_level">Ads and popups</string>
+    <string name="block_popups">Popups</string>
+    <string name="block_all">Ads + popups</string>
+    <string name="block_site">On this site</string>
+    <string name="block_paused">Paused</string>
+    <string name="filters">Filter list</string>
+    <string name="filters_count">%d domains</string>
+    <string name="blocked_count">Blocked this session</string>
+    <string name="filters_updated">Filters updated: %d domains</string>
+    <string name="filters_failed">Could not update the filters</string>
+    <string name="continue_watching">Continue watching</string>
+    <string name="resume_from">Continue from %s?</string>
+    <string name="resume_btn">Continue</string>
+    <string name="from_start">From start</string>
+    <string name="watch_cleared">Continue-watching list cleared</string>
+    <string name="sync_settings">Sync settings too</string>
+    <string name="sync_what">Synced: bookmarks, history, continue watching and settings. Not synced: cookies and logins, the screen margin.</string>
+    <string name="remote_media">Media</string>
+    <string name="remote_seek">Seek</string>
+    <string name="remote_play">Play / pause</string>
+    <string name="remote_slower">Slower</string>
+    <string name="remote_faster">Faster</string>
 </resources>

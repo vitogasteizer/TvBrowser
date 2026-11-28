@@ -12,6 +12,7 @@ import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Message
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
@@ -30,6 +31,7 @@ import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -45,6 +47,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import org.json.JSONObject
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.Inet4Address
@@ -76,6 +79,13 @@ class MainActivity : Activity() {
     private lateinit var screenFrame: FrameLayout
     private lateinit var guide: OverscanGuide
     private var webField = false
+    @Volatile private var mediaOn = false
+    private var startLang = ""
+    @Volatile private var pageHost: String? = null
+    private lateinit var resumeBox: LinearLayout
+    private lateinit var resumeText: TextView
+    private var pendingResume: Watch? = null
+    private var resumeVisible = false
     private lateinit var root: FrameLayout
     private lateinit var content: FrameLayout
     private lateinit var toolbar: LinearLayout
@@ -124,7 +134,6 @@ class MainActivity : Activity() {
     }
     private val hideBar = Runnable {
         if (!autoHide() || customView != null || overlay != null || dialog != null || urlBox.hasFocus()) return@Runnable
-        if (mouseMode && curY <= tbBottom()) { scheduleHide(); return@Runnable }
         if (toolbar.hasFocus()) web.requestFocus()
         toolbar.visibility = View.GONE
     }
@@ -156,6 +165,8 @@ class MainActivity : Activity() {
         }
         mouseMode = store.mouse
         uaMode = store.ua
+        startLang = store.lang
+        AdBlock.load(this)
 
         root = FrameLayout(this).apply { setBackgroundColor(Ui.BG) }
         content = FrameLayout(this)
@@ -215,6 +226,20 @@ class MainActivity : Activity() {
         }
 
         content.addView(web, FrameLayout.LayoutParams(-1, -1))
+        resumeText = TextView(this).apply { setTextColor(Ui.TEXT); px(15f) }
+        resumeBox = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            visibility = View.GONE
+            background = Ui.rect(this@MainActivity, Ui.SURF, 28f, Ui.ACC, 2f)
+            setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
+            addView(resumeText)
+            addView(Ui.button(this@MainActivity, getString(R.string.resume_btn), true, 15f) { doResume() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(46f)).apply { marginStart = dp(18f) })
+            addView(Ui.button(this@MainActivity, getString(R.string.from_start), false, 15f) { dismissResume() },
+                LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(46f)).apply { marginStart = dp(8f) })
+        }
+        content.addView(resumeBox, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(28f), dp(28f)) })
         content.addView(promptBox, FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(28f), dp(28f)) })
         root.addView(content, FrameLayout.LayoutParams(-1, -1))
         root.addView(toolbar, FrameLayout.LayoutParams(-1, -2).apply { setMargins(dp(6f), dp(14f), dp(6f), 0) })
@@ -247,6 +272,8 @@ class MainActivity : Activity() {
     inner class Bridge {
         @JavascriptInterface fun video(f: Boolean) { runOnUiThread { showPrompt(f) } }
         @JavascriptInterface fun field(f: Boolean) { runOnUiThread { webField = f; server?.broadcast(if (f) "ti 1" else "ti 0") } }
+        @JavascriptInterface fun progress(url: String, title: String, t: Double, d: Double) { store.saveProgress(url, title, t.toInt(), d.toInt()) }
+        @JavascriptInterface fun state(paused: Int, t: Int, d: Int, rate: Double) { if (mediaOn) server?.broadcast("ms $paused $t $d $rate") }
         @JavascriptInterface fun pseudo(f: Boolean) { runOnUiThread { pseudoFull = f; if (f) showPrompt(false) } }
     }
 
@@ -258,6 +285,7 @@ class MainActivity : Activity() {
             mediaPlaybackRequiresUserGesture = false
             mixedContentMode = WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
             javaScriptCanOpenWindowsAutomatically = true
+            setSupportMultipleWindows(true)
             allowFileAccess = true
             allowContentAccess = true
         }
@@ -271,12 +299,32 @@ class MainActivity : Activity() {
                     if (r.url.host == "add") showAddSite()
                     return true
                 }
+                if (store.blockMode >= 1 && Build.VERSION.SDK_INT >= 24 && !r.hasGesture() &&
+                    !store.isAllowed(pageHost) && r.url.host?.let { AdBlock.isBlocked(it) } == true) {
+                    AdBlock.blocked++
+                    return true
+                }
                 return s !in listOf("http", "https", "about", "data", "blob", "file", "content")
             }
+            override fun shouldInterceptRequest(v: WebView, r: WebResourceRequest): WebResourceResponse? {
+                if (store.blockMode >= 2 && !r.isForMainFrame) {
+                    val h = r.url.host
+                    val ph = pageHost
+                    val related = ph != null && h != null && (h == ph || h.endsWith(".$ph") || ph.endsWith(".$h"))
+                    if (h != null && !related && !store.isAllowed(ph) && AdBlock.isBlocked(h)) {
+                        AdBlock.blocked++
+                        return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+                    }
+                }
+                return null
+            }
+            override fun onPageCommitVisible(v: WebView, url: String) { injectBlock(v) }
             override fun onPageStarted(v: WebView, url: String, favicon: Bitmap?) {
                 dismissedUrl = null
                 pseudoFull = false
                 startShown = false
+                pendingResume = null
+                pageHost = if (url.startsWith(START_BASE)) null else Uri.parse(url).host?.removePrefix("www.")
                 showPrompt(false)
             }
             override fun onPageFinished(v: WebView, url: String) {
@@ -288,10 +336,27 @@ class MainActivity : Activity() {
                 }
                 if (!urlBox.hasFocus()) urlBox.setText(url)
                 store.addHistory(v.title ?: url, url)
+                injectBlock(v)
+                pendingResume = store.watchFor(url)
                 v.evaluateJavascript(Js.INIT, null)
             }
         }
         val cc = object : WebChromeClient() {
+            override fun onCreateWindow(view: WebView, isDialog: Boolean, isUserGesture: Boolean, resultMsg: Message): Boolean {
+                // there are no tabs: a window the user asked for opens in this page, a scripted one is a popup
+                if (!isUserGesture && store.blockMode >= 1 && !store.isAllowed(pageHost)) { AdBlock.blocked++; return false }
+                val temp = WebView(this@MainActivity)
+                temp.webViewClient = object : WebViewClient() {
+                    override fun shouldOverrideUrlLoading(v: WebView, r: WebResourceRequest): Boolean {
+                        web.loadUrl(r.url.toString())
+                        v.destroy()
+                        return true
+                    }
+                }
+                (resultMsg.obj as WebView.WebViewTransport).webView = temp
+                resultMsg.sendToTarget()
+                return true
+            }
             override fun onShowCustomView(view: View, cb: CustomViewCallback) {
                 customView = view
                 customCb = cb
@@ -322,6 +387,12 @@ class MainActivity : Activity() {
             val l = (t.trim().firstOrNull() ?: '•').uppercaseChar()
             "<a class=t href=\"${esc(u)}\"><i>$l</i>${esc(t.take(22))}</a>"
         }
+        val watch = store.watch().take(6)
+        val cont = if (watch.isEmpty()) "" else
+            "<h2>${getString(R.string.continue_watching)}</h2><div class=\"g\">" + watch.joinToString("") { w ->
+                val pct = if (w.dur > 0) (w.pos * 100 / w.dur).coerceIn(0, 100) else 0
+                "<a class=\"t w\" href=\"${esc(w.url)}\"><i>▶</i>${esc(w.title.ifBlank { w.url }.take(40))}<b><u style=\"width:$pct%\"></u></b></a>"
+            } + "</div>"
         return """<!doctype html><html lang="${getString(R.string.lang_code)}"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4vw;background:#0E1116;color:#F2F4F8;font-family:sans-serif}
@@ -333,10 +404,12 @@ input:focus{outline:.25vw solid #6EA8FF}
 .t{width:14vw;height:12vw;box-sizing:border-box;border-radius:2vw;background:#171B22;border:.15vw solid #262C36;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1vw;color:#F2F4F8;text-decoration:none;font-size:1.6vw;font-weight:600}
 .t:focus{outline:.3vw solid #6EA8FF;background:#222833}
 .t i{width:5.4vw;height:5.4vw;border-radius:50%;background:#243049;color:#6EA8FF;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:2.4vw;font-weight:700}
+.t b{display:block;width:80%;height:.5vw;background:#262C36;border-radius:.3vw;overflow:hidden}.t b u{display:block;height:100%;background:#6EA8FF}
+h2{margin:0;font-size:1.8vw;color:#9AA4B2;font-weight:600}.w{width:20vw;font-size:1.3vw;text-align:center}
 .add{border-style:dashed;color:#9AA4B2}.add i{background:transparent;border:.15vw dashed #3A4352;color:#9AA4B2}
 </style></head><body><h1>${getString(R.string.start_title)}</h1>
 <form action="https://www.google.com/search" method="get"><input name="q" placeholder="${getString(R.string.search_hint)}" autocomplete="off"></form>
-<div class="g">$tiles<a class="t add" href="tvb://add"><i>+</i>${getString(R.string.add)}</a></div></body></html>"""
+$cont<div class="g">$tiles<a class="t add" href="tvb://add"><i>+</i>${getString(R.string.add)}</a></div></body></html>"""
     }
 
     private fun open(url: String) {
@@ -361,6 +434,12 @@ input:focus{outline:.25vw solid #6EA8FF}
         if (input.isBlank()) return
         web.loadUrl(normUrl(input))
         web.requestFocus()
+    }
+
+    private fun injectBlock(v: WebView) {
+        if (store.isAllowed(pageHost)) return
+        if (store.blockMode >= 1) v.evaluateJavascript(Js.POPUPS, null)
+        if (store.blockMode >= 2) v.evaluateJavascript(Js.COSMETIC, null)
     }
 
     private fun applyUa(reload: Boolean) {
@@ -476,18 +555,54 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     // ------------------------------------------------------------ video prompt / fullscreen
+    private fun fmtTime(sec: Int): String {
+        val h = sec / 3600
+        val mi = sec % 3600 / 60
+        val s = sec % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, mi, s) else "%d:%02d".format(mi, s)
+    }
+
     private fun showPrompt(show: Boolean) {
         handler.removeCallbacks(hidePrompt)
         if (show) {
             if (dismissedUrl != null && dismissedUrl == web.url) return
             if (customView != null || overlay != null || pseudoFull) return
-            promptBox.visibility = View.VISIBLE
-            promptVisible = true
-            handler.postDelayed(hidePrompt, 15000)
+            val pr = pendingResume
+            if (pr != null) {
+                resumeText.text = getString(R.string.resume_from, fmtTime(pr.pos))
+                promptBox.visibility = View.GONE
+                promptVisible = false
+                resumeBox.visibility = View.VISIBLE
+                resumeVisible = true
+            } else {
+                resumeBox.visibility = View.GONE
+                resumeVisible = false
+                promptBox.visibility = View.VISIBLE
+                promptVisible = true
+            }
+            handler.postDelayed(hidePrompt, 20000)
         } else {
             promptBox.visibility = View.GONE
             promptVisible = false
+            resumeBox.visibility = View.GONE
+            resumeVisible = false
         }
+    }
+
+    private fun doResume() {
+        val pr = pendingResume ?: return
+        pendingResume = null
+        web.evaluateJavascript("window.__tvbSeek&&window.__tvbSeek(${pr.pos})", null)
+        showPrompt(false)
+        handler.postDelayed({ showPrompt(true) }, 900)
+        web.requestFocus()
+    }
+
+    private fun dismissResume() {
+        pendingResume = null
+        showPrompt(false)
+        handler.postDelayed({ showPrompt(true) }, 300)
+        web.requestFocus()
     }
 
     private fun dismissPrompt() {
@@ -541,13 +656,16 @@ input:focus{outline:.25vw solid #6EA8FF}
         if (dy < 0 && curY <= edge) {
             val sy = if (sv != null) sv.scrollY else web.scrollY
             if (sy > 0) { if (sv != null) sv.scrollBy(0, -amt) else web.scrollBy(0, -amt) }
-            else if (toolbarOnTop && overlay == null) { showBar(true); return }
+            else if (overlay == null) {
+                if (toolbarOnTop) { showBar(true); return }
+                else if (autoHide()) showBar(false)
+            }
         }
         curX = (curX + dx).coerceIn(0f, w - 1)
         curY = (curY + dy).coerceIn(0f, h - 1)
         updateCursor()
         hover()
-        if (autoHide() && overlay == null) { if (curY <= tbBottom()) showBar(false) else scheduleHide() }
+        if (autoHide() && overlay == null && dy > 0 && toolbar.visibility == View.VISIBLE) hideBar.run()
     }
 
     private fun hit(v: View, x: Float, y: Float): Boolean {
@@ -561,9 +679,9 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     private fun promptButtonAt(x: Float, y: Float): Button? {
-        if (!promptVisible) return null
-        for (i in 0 until promptBox.childCount) {
-            val v = promptBox.getChildAt(i)
+        val box = if (resumeVisible) resumeBox else if (promptVisible) promptBox else return null
+        for (i in 0 until box.childCount) {
+            val v = box.getChildAt(i)
             if (v is Button && hit(v, x, y)) return v
         }
         return null
@@ -600,6 +718,7 @@ input:focus{outline:.25vw solid #6EA8FF}
             if (tv is EditText) { showBar(false); tv.requestFocus() } else tv.performClick()
             return
         }
+        if (autoHide() && toolbar.visibility == View.VISIBLE) hideBar.run()
         touchAt((curX - (content.left - cursor.left)), (curY - (content.top - cursor.top)))
     }
 
@@ -635,6 +754,16 @@ input:focus{outline:.25vw solid #6EA8FF}
         if (e.action == KeyEvent.ACTION_DOWN) scheduleHide()
         val k = e.keyCode
         if (k == KeyEvent.KEYCODE_MENU && e.action == KeyEvent.ACTION_DOWN && overlay == null) { showBar(true); return true }
+        when (k) {
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                if (e.action == KeyEvent.ACTION_DOWN && e.repeatCount == 0) togglePlay()
+                return true
+            }
+            KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                if (e.action == KeyEvent.ACTION_DOWN) seek(if (k == KeyEvent.KEYCODE_MEDIA_REWIND) -10 else 10)
+                return true
+            }
+        }
         if (customView != null) {
             val media = k == KeyEvent.KEYCODE_DPAD_CENTER || k == KeyEvent.KEYCODE_ENTER ||
                 k == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || k == KeyEvent.KEYCODE_MEDIA_PLAY || k == KeyEvent.KEYCODE_MEDIA_PAUSE
@@ -647,7 +776,11 @@ input:focus{outline:.25vw solid #6EA8FF}
             }
             return super.dispatchKeyEvent(e)
         }
-        if (!mouseMode || toolbar.hasFocus() || promptBox.hasFocus()) return super.dispatchKeyEvent(e)
+        if (mouseMode && toolbar.hasFocus() && k == KeyEvent.KEYCODE_DPAD_DOWN) {
+            if (e.action == KeyEvent.ACTION_DOWN) { web.requestFocus(); hideBar.run() }
+            return true
+        }
+        if (!mouseMode || toolbar.hasFocus() || promptBox.hasFocus() || resumeBox.hasFocus()) return super.dispatchKeyEvent(e)
         val d = resources.displayMetrics.density
         when (k) {
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
@@ -684,6 +817,7 @@ input:focus{outline:.25vw solid #6EA8FF}
         when {
             overlay != null -> closeOverlay()
             customView != null -> chrome?.onHideCustomView()
+            mouseMode && toolbar.hasFocus() -> { web.requestFocus(); hideBar.run() }
             pseudoFull -> web.evaluateJavascript("window.__tvbExit&&window.__tvbExit()", null)
             web.canGoBack() -> web.goBack()
             else -> super.onBackPressed()
@@ -789,6 +923,14 @@ input:focus{outline:.25vw solid #6EA8FF}
                     "full" -> goFullscreen()
                 }
                 "v" -> volume(p[1])
+                "media" -> { mediaOn = p[1] == "1" }
+                "p" -> when (p[1]) {
+                    "toggle" -> togglePlay()
+                    "seek" -> seek(p[2].toInt())
+                    "seekto" -> web.evaluateJavascript(Js.SEEKTO.replace("__F__", p[2].toFloat().toString()), null)
+                    "rate" -> web.evaluateJavascript(Js.RATE.replace("__D__", p[2].toInt().toString()), null)
+                    "full" -> goFullscreen()
+                }
                 "t" -> typeText(m.substring(2))
                 "b" -> keyTo(focusOwner() ?: web, KeyEvent.KEYCODE_DEL)
                 "e" -> keyTo(focusOwner() ?: web, KeyEvent.KEYCODE_ENTER)
@@ -847,13 +989,24 @@ input:focus{outline:.25vw solid #6EA8FF}
             clearCookies = { CookieManager.getInstance().removeAllCookies(null); web.clearCache(true); toast(getString(R.string.cookies_cleared)) },
             onUpdate = { checkUpdate() },
             onGuide = { showGuide(it) },
+            host = { pageHost },
+            onClearWatch = { store.clearWatch(); toast(getString(R.string.watch_cleared)) },
+            onFilters = { updateFilters() },
             onLang = { recreate() }
         )
         showOverlay(SettingsUi.build(this, store, a) { closeOverlay() })
     }
 
+    private fun onSettingsSynced() {
+        mouseMode = store.mouse
+        uaMode = store.ua
+        applyUa(false)
+        applyMode()
+        if (store.lang != startLang) recreate()
+    }
+
     private fun showSync() {
-        showOverlay(SyncUi.build(this, store) { closeOverlay() })
+        showOverlay(SyncUi.build(this, store, { onSettingsSynced() }) { closeOverlay() })
     }
 
     private fun showAddSite() {
@@ -892,6 +1045,14 @@ input:focus{outline:.25vw solid #6EA8FF}
     }
 
     // ------------------------------------------------------------ volume and updates
+    private fun updateFilters() {
+        toast(getString(R.string.checking))
+        Thread {
+            val n = AdBlock.update(this)
+            runOnUiThread { toast(if (n >= 0) getString(R.string.filters_updated, n) else getString(R.string.filters_failed)) }
+        }.start()
+    }
+
     private fun volume(a: String) {
         val am = getSystemService(AUDIO_SERVICE) as AudioManager
         try {

@@ -27,8 +27,18 @@ class Cv:
         s.d.text((x*S,y*S),t,font=s.font(sz,b),fill=col,anchor=anchor)
     def save(s,p):
         os.makedirs(os.path.dirname(p),exist_ok=True); s.im.resize((s.w,s.h),Image.LANCZOS).save(p)
-    def icon(s,n,cx,cy,col):
-        L=lambda pts:s.ln([(cx+x,cy+y) for x,y in pts],col)
+    def icon(s,n,cx,cy,col,k=1.0):
+        L=lambda pts:s.ln([(cx+x*k,cy+y*k) for x,y in pts],col,2.2*max(1,k*0.8))
+        if n=='play':s.d.polygon([((cx+x*k)*S,(cy+y*k)*S) for x,y in((-5,-9),(-5,9),(9,0))],fill=col);return
+        if n=='pause':L([(-4,-8),(-4,8)]);L([(4,-8),(4,8)]);return
+        if n=='rw':L([(-1,-7),(-8,0),(-1,7),(-1,-7)]);L([(8,-7),(1,0),(8,7),(8,-7)]);return
+        if n=='ff':L([(1,-7),(8,0),(1,7),(1,-7)]);L([(-8,-7),(-1,0),(-8,7),(-8,-7)]);return
+        if n=='plus':L([(0,-7),(0,7)]);L([(-7,0),(7,0)]);return
+        if n=='minus':L([(-7,0),(7,0)]);return
+        if n=='full':
+            for sx in(-1,1):
+                for sy in(-1,1):L([(sx*9,sy*4),(sx*9,sy*9),(sx*4,sy*9)])
+            return
         if n=='back':L([(3,-8),(-4,0),(3,8)])
         elif n=='fwd':L([(-3,-8),(4,0),(-3,8)])
         elif n=='reload':
@@ -76,7 +86,7 @@ def main_screen(L,lang):
     c.save('docs/images/%s/main.png'%lang)
 
 def settings_screen(L,lang):
-    c=Cv(1280,1000)
+    c=Cv(1280,1140)
     c.circ(86,66,28,fill=SURF2); c.icon('back',86,66,TEXT); c.tx(130,66,L['settings'],34,TEXT,True)
     def card(x,y,w,title,rows):
         h=24+34+len(rows)*60+10; c.rr(x,y,x+w,y+h,24,fill=SURF,outline=LINE); c.tx(x+26,y+36,title,20,TEXT,True)
@@ -106,35 +116,47 @@ def settings_screen(L,lang):
     h2=card(lx,120+h1+20,cw,L['control'],[(L['mode'],'seg',([L['mouse'],L['buttons']],0)),(L['scroll_speed'],'slider',.5),(L['language'],'seg',([L['lang_auto'],'English','ქართული'],0))])
     card(lx,120+h1+20+h2+20,cw,L['update'],[(L['version'],'txt','2.31'),(L['update_link'],'txt','github.com/…/app-debug.apk'),(L['new_version'],'btn',L['update'])])
     h4=card(rx_,120,cw,L['browser'],[(L['site_version'],'seg',(['Desktop','Tablet','Phone'],0)),(L['text_scale'],'seg',(['75%','100%','125%','150%'],1)),(L['overscan'],'slidertxt',('2.0%',.2)),(L['home_page'],'txt','google.com'),(L['autohide'],'seg',([L['off'],L['on']],1))])
-    card(rx_,120+h4+20,cw,L['data'],[(L['history'],'btn',L['clear']),(L['cookies_logins'],'btn',L['clear']),(L['sync'],'btn',L['open'])])
+    h5=card(rx_,120+h4+20,cw,L['block_title'],[(L['block_level'],'seg',([L['off'],L['block_popups'],L['block_all']],2)),(L['filters'],'btn',L['update']),(L['blocked_count'],'txt','128')])
+    card(rx_,120+h4+20+h5+20,cw,L['data'],[(L['history'],'btn',L['clear']),(L['continue_watching'],'btn',L['clear']),(L['cookies_logins'],'btn',L['clear']),(L['sync'],'btn',L['open'])])
     c.save('docs/images/%s/settings.png'%lang)
 
-def phone_screen(L,lang,buttons):
+def phone_screen(L,lang,mode):
+    buttons=mode=='buttons'; media=mode=='media'
     c=Cv(390,844)
     c.circ(28,40,5,fill=(110,231,168));c.tx(44,40,L['remote_connected'],14,TEXT,True)
-    c.rr(250,22,374,58,18,fill=SURF)
-    c.rr(254,26,306,54,14,fill=SURF if buttons else ACC);c.icon('mouse',280,40,MUTED if buttons else ONACC)
-    c.rr(318,26,370,54,14,fill=ACC if buttons else SURF);c.icon('dpad',344,40,ONACC if buttons else MUTED)
-    if not buttons:
+    c.rr(232,22,374,58,18,fill=SURF)
+    for i,(ic,on) in enumerate((('mouse',mode=='mouse'),('dpad',buttons),('play',media))):
+        x=236+i*44;c.rr(x,26,x+40,54,14,fill=ACC if on else SURF);c.icon(ic,x+20,40,ONACC if on else MUTED)
+    if mode=='mouse':
         c.rr(16,72,374,590,36,fill=SURF,outline=LINE);c.circ(180,331,28,fill=SURF2)
         c.rr(316,92,362,570,23,fill=SURF2);c.icon('up',339,114,MUTED);c.icon('dn',339,548,MUTED);c.rr(337,150,341,512,2,fill=GRAY)
-    else:
+    elif buttons:
         for i in range(8):
             x=16+(i%4)*92;y=72+(i//4)*62
             c.rr(x,y,x+84,y+52,26,fill=SURF2);c.icon(('fwd','reload','bm','hist','folder','back','gear','desk')[i],x+42,y+26,TEXT)
         c.circ(195,400,170,fill=SURF,outline=LINE);c.circ(195,400,66,fill=ACC);c.tx(195,400,'OK',20,ONACC,True,'mm')
         c.icon('up',195,262,TEXT);c.icon('dn',195,538,TEXT);c.icon('back',58,400,TEXT);c.icon('fwd',332,400,TEXT)
+    else:
+        c.tx(195,150,'34:12 / 1:52:10',16,MUTED,False,'mm')
+        c.rr(26,194,364,200,3,fill=SURF2);c.rr(26,194,128,200,3,fill=ACC);c.circ(128,197,10,fill=ACC)
+        c.circ(105,300,31,fill=SURF2);c.icon('rw',105,300,TEXT);c.tx(105,345,'10',13,MUTED,False,'mm')
+        c.circ(195,300,52,fill=ACC);c.icon('pause',195,300,ONACC,2.0)
+        c.circ(285,300,31,fill=SURF2);c.icon('ff',285,300,TEXT);c.tx(285,345,'10',13,MUTED,False,'mm')
+        c.rr(88,392,188,446,27,fill=SURF2);c.tx(138,419,'−1:00',15,TEXT,True,'mm')
+        c.rr(202,392,302,446,27,fill=SURF2);c.tx(252,419,'+1:00',15,TEXT,True,'mm')
+        c.circ(60,510,28,fill=SURF2);c.icon('minus',60,510,TEXT);c.tx(130,510,'1.25×',18,TEXT,True,'mm')
+        c.circ(200,510,28,fill=SURF2);c.icon('plus',200,510,TEXT);c.circ(300,510,28,fill=ACC);c.icon('full',300,510,ONACC)
     c.circ(78,650,31,fill=SURF2);c.icon('back',78,650,TEXT)
     c.circ(195,650,40,fill=SURF2);c.icon('home',195,650,TEXT)
     c.circ(312,650,31,fill=SURF2);c.icon('mute',312,650,TEXT)
     c.rr(16,716,374,772,28,fill=SURF2);c.d.line([(195*S,724*S),(195*S,764*S)],fill=GRAY,width=S)
     c.icon('vol',105,744,TEXT);c.icon('volup',285,744,TEXT)
-    c.save('docs/images/%s/%s.png'%(lang,'phone-buttons' if buttons else 'phone'))
+    c.save('docs/images/%s/%s.png'%(lang,{'mouse':'phone','buttons':'phone-buttons','media':'phone-media'}[mode]))
 
 langs={'en':RES+'values/strings.xml'}
 for p in sorted(glob.glob(RES+'values-*/strings.xml')): langs[p.split('values-')[1].split('/')[0]]=p
 base=strings(langs['en'])
 for lang,path in langs.items():
     L=dict(base); L.update(strings(path))
-    main_screen(L,lang);settings_screen(L,lang);phone_screen(L,lang,False);phone_screen(L,lang,True)
+    main_screen(L,lang);settings_screen(L,lang);phone_screen(L,lang,'mouse');phone_screen(L,lang,'buttons');phone_screen(L,lang,'media')
 print('previews:',', '.join(langs))

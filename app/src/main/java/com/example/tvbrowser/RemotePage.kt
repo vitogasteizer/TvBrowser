@@ -39,6 +39,17 @@ header{display:flex;align-items:center;justify-content:space-between;height:40px
 .vol{flex:1;display:flex;border-radius:28px;overflow:hidden;background:#222833}
 .vol button{flex:1;border-radius:0;background:transparent}
 .vol button+button{border-left:1px solid #3A4352}
+#md{display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:20px;min-height:0}
+body.m2 #pad,body.m2 #nav,body.m2 #dw{display:none}
+body.m2 #md{display:flex}
+#tm{font-size:16px;color:#9AA4B2;font-variant-numeric:tabular-nums}
+#sk{width:100%;accent-color:#6EA8FF;touch-action:auto}
+.mrow{display:flex;align-items:center;justify-content:center;gap:14px}
+.mrow button{height:62px;min-width:62px;border-radius:31px;padding:0 18px;gap:6px;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.mrow .acc{background:#6EA8FF;color:#0B1220}
+#pp{width:104px;height:104px;border-radius:52px;background:#6EA8FF;color:#0B1220;padding:0}
+#pp svg{width:44px;height:44px}
+.rate{min-width:56px;text-align:center;font-weight:700;font-size:18px}
 body.m1 #pad{display:none}
 body.m1 #nav{display:grid}
 body.m1 #dw{display:flex}
@@ -64,6 +75,12 @@ body.m1 #dw{display:flex}
 <symbol id="mouse" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M12 7v4"/></symbol>
 <symbol id="dp" viewBox="0 0 24 24"><path d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6z"/></symbol>
 <symbol id="go" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+<symbol id="play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" style="fill:currentColor"/></symbol>
+<symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14" style="stroke-width:3.2"/></symbol>
+<symbol id="rw" viewBox="0 0 24 24"><path d="M11 6l-7 6 7 6zM20 6l-7 6 7 6z"/></symbol>
+<symbol id="ff" viewBox="0 0 24 24"><path d="M13 6l7 6-7 6zM4 6l7 6-7 6z"/></symbol>
+<symbol id="minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
 <symbol id="dn" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
 <symbol id="vm" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/></symbol>
@@ -71,7 +88,7 @@ body.m1 #dw{display:flex}
 <symbol id="vu" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
 </defs></svg>
 <header><div class="st"><span id="dot"></span><span id="stx">@@remote_connecting@@</span></div>
-<div class="seg"><button id="m0" class="on" aria-label="@@remote_mouse@@"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="@@remote_buttons@@"><svg class="i"><use href="#dp"/></svg></button></div></header>
+<div class="seg"><button id="m0" class="on" aria-label="@@remote_mouse@@"><svg class="i"><use href="#mouse"/></svg></button><button id="m1" aria-label="@@remote_buttons@@"><svg class="i"><use href="#dp"/></svg></button><button id="m2" aria-label="@@remote_media@@"><svg class="i"><use href="#play"/></svg></button></div></header>
 <div id="tp"><input id="tpi" placeholder="@@remote_type@@" autocomplete="off" autocapitalize="off"><button id="tpg" aria-label="@@remote_go@@"><svg class="i"><use href="#go"/></svg></button></div>
 <div id="pad"><div id="scr"><svg class="i"><use href="#up"/></svg><i></i><svg class="i"><use href="#dn"/></svg></div></div>
 <div id="nav">
@@ -91,6 +108,25 @@ body.m1 #dw{display:flex}
 <button class="r" data-d="r" aria-label="@@remote_right@@"><svg class="i"><use href="#fwd"/></svg></button>
 <button class="ok" data-k="ok">OK</button>
 </div></div>
+<div id="md">
+<div id="tm">--:-- / --:--</div>
+<input id="sk" type="range" min="0" max="1000" value="0" aria-label="@@remote_seek@@">
+<div class="mrow">
+<button data-p="seek -10" aria-label="-10"><svg class="i"><use href="#rw"/></svg>10</button>
+<button id="pp" data-p="toggle" aria-label="@@remote_play@@"><svg class="i"><use id="ppu" href="#play"/></svg></button>
+<button data-p="seek 10" aria-label="+10">10<svg class="i"><use href="#ff"/></svg></button>
+</div>
+<div class="mrow">
+<button data-p="seek -60">−1:00</button>
+<button data-p="seek 60">+1:00</button>
+</div>
+<div class="mrow">
+<button data-p="rate -1" aria-label="@@remote_slower@@"><svg class="i"><use href="#minus"/></svg></button>
+<span class="rate" id="rt">1×</span>
+<button data-p="rate 1" aria-label="@@remote_faster@@"><svg class="i"><use href="#plus"/></svg></button>
+<button class="acc" data-p="full" aria-label="@@remote_fullscreen@@"><svg class="i"><use href="#full"/></svg></button>
+</div>
+</div>
 <div class="r1">
 <button data-k="back" aria-label="@@remote_back@@"><svg class="i"><use href="#back"/></svg></button>
 <button class="home" data-a="home" aria-label="@@remote_home@@"><svg class="i"><use href="#home"/></svg></button>
@@ -105,16 +141,19 @@ var g=function(i){return document.getElementById(i)};
 var K=new URLSearchParams(location.search).get('k'),ws=null,mode=0;
 function conn(){
  ws=new WebSocket('ws://'+location.host+'/ws?k='+K);
- ws.onopen=function(){g('dot').className='ok';g('stx').textContent='@@remote_connected@@';send('mode '+mode);};
- ws.onmessage=function(e){if(e.data=='ti 1'){g('tp').className='show';g('tpi').focus();setTimeout(fit,30);}else if(e.data=='ti 0'){g('tp').className='';setTimeout(fit,30);}};
+ ws.onopen=function(){g('dot').className='ok';g('stx').textContent='@@remote_connected@@';if(mode<2){send('mode '+mode);}send('media '+(mode==2?1:0));};
+ ws.onmessage=function(e){if(e.data.indexOf('ms ')==0){media(e.data);return;}if(e.data=='ti 1'){g('tp').className='show';g('tpi').focus();setTimeout(fit,30);}else if(e.data=='ti 0'){g('tp').className='';setTimeout(fit,30);}};
  ws.onclose=function(){g('dot').className='';g('stx').textContent='@@remote_connecting@@';setTimeout(conn,1000);};
 }
 function send(s){if(ws&&ws.readyState==1)ws.send(s);}
 function fit(){var w=g('dw'),d=g('dpad'),s=Math.min(w.clientWidth,w.clientHeight);if(s>0){d.style.width=s+'px';d.style.height=s+'px';}}
 window.addEventListener('resize',fit);
-function setMode(m){mode=m;setTimeout(fit,30);g('m0').className=m==0?'on':'';g('m1').className=m==1?'on':'';
- document.body.className=m==1?'m1':'';send('mode '+m);}
-g('m0').onclick=function(){setMode(0)};g('m1').onclick=function(){setMode(1)};
+function setMode(m){mode=m;setTimeout(fit,30);
+ ['m0','m1','m2'].forEach(function(id,i){g(id).className=(i==m)?'on':'';});
+ document.body.className=m==1?'m1':(m==2?'m2':'');
+ if(m<2){send('mode '+m);}
+ send('media '+(m==2?1:0));}
+g('m0').onclick=function(){setMode(0)};g('m1').onclick=function(){setMode(1)};g('m2').onclick=function(){setMode(2)};
 var pad=g('pad'),lx=0,ly=0,sx=0,sy=0,t0=0,moved=0,ax=0,ay=0,tm=null;
 function flush(){if(tm)return;tm=setTimeout(function(){tm=null;if(mode==0&&(ax||ay))send('m '+Math.round(ax)+' '+Math.round(ay));ax=0;ay=0;},25);}
 pad.addEventListener('touchstart',function(e){if(e.target.closest('#scr'))return;var t=e.touches[0];lx=sx=t.clientX;ly=sy=t.clientY;t0=Date.now();moved=0;e.preventDefault();},{passive:false});
@@ -125,6 +164,19 @@ sc.addEventListener('touchstart',function(e){sy0=e.touches[0].clientY;e.preventD
 sc.addEventListener('touchmove',function(e){var y=e.touches[0].clientY;send('s '+Math.round(sy0-y));sy0=y;e.preventDefault();},{passive:false});
 function bind(sel,attr,cmd){document.querySelectorAll(sel).forEach(function(b){b.onclick=function(){send(cmd+' '+b.getAttribute(attr));};});}
 bind('[data-k]','data-k','k');bind('[data-a]','data-a','a');bind('[data-d]','data-d','d');bind('[data-v]','data-v','v');
+function fmt(s){s=Math.max(0,Math.floor(s));var h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+ return (h>0?h+':'+(m<10?'0':''):'')+m+':'+(x<10?'0':'')+x;}
+var drag=false;
+function media(d){var a=d.split(' '),paused=+a[1],t=+a[2],dur=+a[3],rate=+a[4];
+ g('ppu').setAttribute('href',paused==0?'#pause':'#play');
+ if(paused<0||dur<=0){g('tm').textContent='--:-- / --:--';return;}
+ g('tm').textContent=fmt(t)+' / '+fmt(dur);g('rt').textContent=rate+'×';
+ if(!drag){g('sk').value=Math.round(1000*t/dur);}}
+var sk=g('sk');
+sk.addEventListener('touchstart',function(){drag=true;});
+sk.addEventListener('touchend',function(){drag=false;});
+sk.addEventListener('change',function(){send('p seekto '+(sk.value/1000));});
+bind('[data-p]','data-p','p');
 function tpGo(){var v=g('tpi').value;if(v){send('t '+v);}send('e');g('tpi').value='';g('tp').className='';}
 g('tpg').onclick=tpGo;
 g('tpi').addEventListener('keydown',function(e){if(e.key=='Enter'){tpGo();e.preventDefault();}});

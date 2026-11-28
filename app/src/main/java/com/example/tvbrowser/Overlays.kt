@@ -33,7 +33,10 @@ object SettingsUi {
         val clearCookies: () -> Unit,
         val onUpdate: () -> Unit,
         val onGuide: (Boolean) -> Unit,
-        val onLang: () -> Unit
+        val onLang: () -> Unit,
+        val host: () -> String?,
+        val onFilters: () -> Unit,
+        val onClearWatch: () -> Unit
     )
 
     fun build(ctx: Context, s: Store, a: Actions, close: () -> Unit): View {
@@ -75,9 +78,24 @@ object SettingsUi {
             addView(Ui.row(ctx, ctx.getString(R.string.home_page), homeField))
             addView(Ui.row(ctx, ctx.getString(R.string.autohide), Ui.seg(ctx, listOf(ctx.getString(R.string.off), ctx.getString(R.string.on)), if (s.autohide) 1 else 0) { s.autohide = it == 1; a.onPrefs() }))
         }
+        val hostNow = a.host()
+        val blocking = Ui.card(ctx).apply {
+            addView(Ui.heading(ctx, ctx.getString(R.string.block_title)))
+            addView(Ui.row(ctx, ctx.getString(R.string.block_level),
+                Ui.seg(ctx, listOf(ctx.getString(R.string.off), ctx.getString(R.string.block_popups), ctx.getString(R.string.block_all)), s.blockMode) { s.blockMode = it; a.onPrefs() }))
+            if (hostNow != null) {
+                addView(Ui.row(ctx, ctx.getString(R.string.block_site) + ": " + hostNow,
+                    Ui.seg(ctx, listOf(ctx.getString(R.string.block_paused), ctx.getString(R.string.on)), if (s.isAllowed(hostNow)) 0 else 1) { s.setAllowed(hostNow, it == 0) }))
+            }
+            addView(Ui.row(ctx, ctx.getString(R.string.filters) + " (" + ctx.getString(R.string.filters_count, AdBlock.count()) + ")",
+                Ui.button(ctx, ctx.getString(R.string.update), false, 16f) { a.onFilters() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.blocked_count),
+                TextView(ctx).apply { text = AdBlock.blocked.toString(); setTextColor(Ui.MUTED); px(18f) }))
+        }
         val data = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.data)))
             addView(Ui.row(ctx, ctx.getString(R.string.history), Ui.button(ctx, ctx.getString(R.string.clear), false, 16f) { a.clearHistory() }))
+            addView(Ui.row(ctx, ctx.getString(R.string.continue_watching), Ui.button(ctx, ctx.getString(R.string.clear), false, 16f) { a.onClearWatch() }))
             addView(Ui.row(ctx, ctx.getString(R.string.cookies_logins), Ui.button(ctx, ctx.getString(R.string.clear), false, 16f) { a.clearCookies() }))
             addView(Ui.row(ctx, ctx.getString(R.string.sync), Ui.button(ctx, ctx.getString(R.string.open), true, 16f) { a.openSync() }))
         }
@@ -91,7 +109,7 @@ object SettingsUi {
             addView(Ui.row(ctx, ctx.getString(R.string.update_link), urlField))
             addView(Ui.row(ctx, ctx.getString(R.string.new_version), Ui.button(ctx, ctx.getString(R.string.update), true, 16f) { a.onUpdate() }))
         }
-        return Ui.screen(ctx, ctx.getString(R.string.settings), close, Ui.twoCols(ctx, listOf(mouse, control, update), listOf(browser, data)))
+        return Ui.screen(ctx, ctx.getString(R.string.settings), close, Ui.twoCols(ctx, listOf(mouse, control, update), listOf(browser, blocking, data)))
     }
 }
 
@@ -100,11 +118,12 @@ object SyncUi {
     private val ID_RE = Regex("^usr_[a-z0-9]{6,}$")
 
     /** replace = this device takes the cloud data; otherwise both sides are merged. */
-    private fun work(ctx: Context, s: Store, replace: Boolean, done: () -> Unit) {
+    private fun work(ctx: Context, s: Store, replace: Boolean, applied: () -> Unit, done: () -> Unit) {
         if (!Cloud.configured()) { toast(ctx, ctx.getString(R.string.no_firebase)); return }
         val id = s.syncId ?: s.deviceId
         toast(ctx, ctx.getString(R.string.working))
         Thread {
+            var settingsApplied = false
             val msg = try {
                 val remote = Cloud.get(id)
                 if (replace) {
@@ -113,21 +132,29 @@ object SyncUi {
                     } else {
                         s.replaceBookmarks(remote.bookmarks)
                         s.replaceHistory(remote.history)
+                        s.replaceWatch(remote.watch)
+                        if (s.syncSettings && s.hasSettings(remote.settings)) { s.applySettings(remote.settings); settingsApplied = true }
                         ctx.getString(R.string.replace_done, s.bookmarks().size, s.history().size)
                     }
                 } else {
-                    if (remote != null) { s.mergeBookmarks(remote.bookmarks); s.mergeHistory(remote.history) }
-                    Cloud.put(id, Cloud.Data(s.bookmarksJson(), s.historyJson()))
+                    if (remote != null) {
+                        s.mergeBookmarks(remote.bookmarks)
+                        s.mergeHistory(remote.history)
+                        s.mergeWatch(remote.watch)
+                        if (s.syncSettings && s.settingsNewer(remote.settings)) { s.applySettings(remote.settings); settingsApplied = true }
+                    }
+                    val st = if (s.syncSettings) s.settingsJson() else (remote?.settings ?: "{}")
+                    Cloud.put(id, Cloud.Data(s.bookmarksJson(), s.historyJson(), st, s.watchJson()))
                     ctx.getString(R.string.sync_done, s.bookmarks().size, s.history().size)
                 }
             } catch (e: Exception) {
                 ctx.getString(R.string.sync_failed, e.message ?: "")
             }
-            Handler(Looper.getMainLooper()).post { toast(ctx, msg); done() }
+            Handler(Looper.getMainLooper()).post { toast(ctx, msg); if (settingsApplied) applied(); done() }
         }.start()
     }
 
-    fun build(ctx: Context, s: Store, close: () -> Unit): View {
+    fun build(ctx: Context, s: Store, applied: () -> Unit, close: () -> Unit): View {
         var hidden = false
         val idView = TextView(ctx).apply {
             setTextColor(Ui.TEXT); px(18f); typeface = Typeface.MONOSPACE
@@ -172,8 +199,8 @@ object SyncUi {
             counts.text = ctx.getString(R.string.counts, s.bookmarks().size, s.history().size)
         }
         refresh()
-        btnMerge.setOnClickListener { work(ctx, s, false) { blink(false); refresh() } }
-        btnReplace.setOnClickListener { work(ctx, s, true) { blink(false); refresh() } }
+        btnMerge.setOnClickListener { work(ctx, s, false, applied) { blink(false); refresh() } }
+        btnReplace.setOnClickListener { work(ctx, s, true, applied) { blink(false); refresh() } }
         val wrapLp = { LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT) }
         val idRow = LinearLayout(ctx).apply {
             gravity = Gravity.CENTER_VERTICAL
@@ -217,9 +244,11 @@ object SyncUi {
 
         val data = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.data)))
-            addView(counts, wrapLp().apply { bottomMargin = Ui.dp(ctx, 14f) })
+            addView(counts, wrapLp().apply { bottomMargin = Ui.dp(ctx, 6f) })
+            addView(Ui.row(ctx, ctx.getString(R.string.sync_settings), Ui.seg(ctx, listOf(ctx.getString(R.string.off), ctx.getString(R.string.on)), if (s.syncSettings) 1 else 0) { s.syncSettings = it == 1 }))
             addView(btnMerge, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)))
             addView(btnReplace, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, Ui.dp(ctx, 60f)).apply { topMargin = Ui.dp(ctx, 12f); bottomMargin = Ui.dp(ctx, 10f) })
+            addView(Ui.note(ctx, ctx.getString(R.string.sync_what)))
         }
         val safety = Ui.card(ctx).apply {
             addView(Ui.heading(ctx, ctx.getString(R.string.security)))
